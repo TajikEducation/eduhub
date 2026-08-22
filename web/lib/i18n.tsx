@@ -13,7 +13,7 @@ export type Locale = "ru" | "tg";
 export const UI_STRINGS: Record<string, Bi> = {
   // nav
   "nav.home": { ru: "Главная", tg: "Асосӣ" },
-  "nav.search": { ru: "Учреждения", tg: "Муассисаҳо" },
+  "nav.search": { ru: "Каталог", tg: "Каталог" },
   "nav.vacancies": { ru: "Вакансии", tg: "Ҷойҳои холӣ" },
   "nav.about": { ru: "О нас", tg: "Дар бораи мо" },
   "nav.categories": { ru: "Типы учреждений", tg: "Намудҳои муассиса" },
@@ -29,6 +29,8 @@ export const UI_STRINGS: Record<string, Bi> = {
   "nav.allRegions": { ru: "Все регионы", tg: "Ҳама минтақаҳо" },
   "nav.role.user": { ru: "Обычный пользователь", tg: "Истифодабарандаи оддӣ" },
   "nav.role.institution": { ru: "Учреждение", tg: "Муассиса" },
+  "nav.role.moderator": { ru: "Модератор", tg: "Модератор" },
+  "nav.role.admin": { ru: "Администратор платформы", tg: "Маъмури платформа" },
   "nav.guide.applicants": { ru: "Соискателям", tg: "Ба ҷуяндагони кор" },
 
   // common

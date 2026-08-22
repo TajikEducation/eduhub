@@ -11,7 +11,7 @@ export interface GuideStep { icon: LucideIcon; title: Bi; desc: Bi; screenshot?:
 export interface GuideFaq { q: Bi; a: Bi; group?: Bi; }
 
 export function GuidePage({
-  heroPhoto, eyebrow, title, subtitle, steps, faq, ctaLabel, ctaHref, secondaryLabel, secondaryHref, accent,
+  heroPhoto, eyebrow, title, subtitle, steps, faq, ctaLabel, ctaHref, secondaryLabel, secondaryHref, accent, extra,
 }: {
   heroPhoto: string;
   eyebrow: Bi;
@@ -24,6 +24,7 @@ export function GuidePage({
   secondaryLabel: Bi;
   secondaryHref: string;
   accent: string;
+  extra?: React.ReactNode;
 }) {
   const t = useT();
   const { locale } = useLocale();
@@ -70,6 +71,8 @@ export function GuidePage({
           </div>
         </div>
       </div>
+
+      {extra}
 
       {/* ── STEPS ── */}
       <div style={{ maxWidth: 1080, margin: "0 auto", padding: "0 28px 64px" }}>

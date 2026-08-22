@@ -3,10 +3,10 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MapPin } from "lucide-react";
-import { C, FH, FB, INSTITUTIONS, CATEGORY_META, REGION_LABEL, REGION_ORDER, type CategoryKey } from "@/lib/data";
+import { C, FH, FB, CATEGORY_META, REGION_LABEL, REGION_ORDER, type CategoryKey } from "@/lib/data";
 import { InstitCard } from "./InstitCard";
 import { SubjectMotifs } from "./SubjectMotifs";
-import { useAppState } from "@/lib/app-state";
+import { useAppState, useVisibleInstitutions } from "@/lib/app-state";
 import { useT } from "@/lib/i18n";
 import { useReveal, revealStyle } from "@/lib/useReveal";
 
@@ -18,10 +18,11 @@ export function CategoryListing({ tk }: { tk: CategoryKey }) {
   const meta = CATEGORY_META[tk];
   const Icon = meta.icon;
   const { ref, visible } = useReveal<HTMLDivElement>();
+  const institutions = useVisibleInstitutions();
 
   const list = useMemo(
-    () => INSTITUTIONS.filter((i) => i.tk === tk && (!regionFilter || i.region === regionFilter)),
-    [tk, regionFilter]
+    () => institutions.filter((i) => i.tk === tk && (!regionFilter || i.region === regionFilter)),
+    [institutions, tk, regionFilter]
   );
 
   return (

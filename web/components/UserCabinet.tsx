@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Award, Baby, Bookmark, Briefcase, ChevronRight, FileText, GraduationCap, Medal, MessageSquare, Pencil, Plus, Sparkles, Star, Trash2, Trophy, Upload, X, type LucideIcon } from "lucide-react";
-import { C, FH, FB, INSTITUTIONS, REVIEWS, VACANCIES, EMPLOYER_RESPONSES, type Achievement, type Bi, type ApplicantVisibility } from "@/lib/data";
+import { C, FH, FB, INSTITUTIONS, REVIEWS, VACANCIES, type Achievement, type Bi, type ApplicantVisibility } from "@/lib/data";
 import { useAppState, type ChildStatus } from "@/lib/app-state";
 import { chatHref } from "@/lib/chat-window";
 import { useT, useLocale } from "@/lib/i18n";
@@ -13,7 +13,7 @@ import { Modal } from "./ui/Modal";
 type Tab = "applicant" | "saved" | "reviews" | "messages" | "children";
 type ApplicantSubTab = "profile" | "achievements" | "applications";
 
-const MY_REVIEW_IDS = ["r1", "r3", "r6"];
+const MY_REVIEW_IDS = ["r1", "r6", "r9", "r12", "r14"];
 const CHILD_STATUS_KEY: Record<ChildStatus, string> = {
   current: "children.statusCurrent",
   alumnus: "children.statusAlumnus",
@@ -71,7 +71,8 @@ function ListEditor({ items, onChange, placeholder }: { items: Bi[]; onChange: (
 // (есть ли привязанный ребёнок / опубликован ли профиль резюме) — модель B.
 export function UserCabinet() {
   const router = useRouter();
-  const { savedIds, toggleSaved, children_: children, addChild, removeChild, applicant, setApplicant, applications } = useAppState();
+  const { savedIds, toggleSaved, children_: children, addChild, removeChild, applicant, setApplicant, applications, employerResponses } = useAppState();
+  const myResponses = employerResponses.filter((r) => r.applicantId === applicant.id);
   const t = useT();
   const { locale } = useLocale();
   const [tab, setTab] = useState<Tab>("saved");
@@ -509,11 +510,11 @@ export function UserCabinet() {
 
               <div>
                 <p style={{ fontFamily: FH, fontWeight: 800, fontSize: 15, color: C.text, marginBottom: 12 }}>{t("applicant.employerResponses")}</p>
-                {EMPLOYER_RESPONSES.length === 0 ? (
+                {myResponses.length === 0 ? (
                   <p style={{ color: C.muted, fontSize: 13.5 }}>{t("empty.employerResponses")}</p>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {EMPLOYER_RESPONSES.map((r) => {
+                    {myResponses.map((r) => {
                       const inst = INSTITUTIONS.find((i) => i.id === r.instId);
                       if (!inst) return null;
                       return (

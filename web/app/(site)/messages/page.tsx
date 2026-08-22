@@ -66,14 +66,13 @@ function MessagesInner() {
   }
 
   return (
-    <div style={{ maxWidth: 1100, margin: "0 auto", height: "calc(100vh - 64px)", display: "flex", fontFamily: FB, border: `1px solid ${C.border}`, borderTop: "none" }}>
+    <div style={{ maxWidth: 1100, margin: "0 auto", padding: "28px 28px 80px", fontFamily: FB }}>
+      <h1 style={{ fontFamily: FH, fontWeight: 900, fontSize: "clamp(22px,3vw,30px)", color: C.text, marginBottom: 20 }}>
+        {t({ ru: "Сообщения", tg: "Паёмҳо" })}
+      </h1>
+      <div style={{ height: "calc(100vh - 260px)", minHeight: 480, display: "flex", borderRadius: 18, border: `1px solid ${C.border}`, overflow: "hidden" }}>
       {/* ── conversation list ── */}
       <div style={{ width: 220, borderRight: `1px solid ${C.border}`, overflowY: "auto", flexShrink: 0, background: C.s1 }}>
-        <div style={{ padding: "16px 18px", borderBottom: `1px solid ${C.border}` }}>
-          <span style={{ fontFamily: FH, fontWeight: 800, fontSize: 15, color: C.text }}>
-            {t({ ru: "Сообщения", tg: "Паёмҳо" })}
-          </span>
-        </div>
         {CONVS.map((c) => (
           <button
             key={c.id}
@@ -115,7 +114,7 @@ function MessagesInner() {
           )}
           {thread.map((m) => (
             <div key={m.id} style={{ alignSelf: m.from === "me" ? "flex-end" : "flex-start", maxWidth: "70%" }}>
-              <div style={{ background: m.from === "me" ? C.teal : C.s2, color: m.from === "me" ? C.bg : C.text, padding: "10px 14px", borderRadius: 12, fontSize: 14, lineHeight: 1.5 }}>
+              <div style={{ background: m.from === "me" ? C.teal : C.s2, color: m.from === "me" ? C.overlay : C.text, padding: "10px 14px", borderRadius: 16, fontSize: 14, lineHeight: 1.5 }}>
                 {m.text}
               </div>
               <div style={{ fontSize: 11, color: C.dim, marginTop: 3, textAlign: m.from === "me" ? "right" : "left" }}>{m.time}</div>
@@ -133,9 +132,10 @@ function MessagesInner() {
             style={{ flex: 1, background: C.s2, border: `1px solid ${C.border}`, borderRadius: 12, padding: "12px 16px", color: C.text, fontSize: 14, fontFamily: FB, outline: "none" }}
           />
           <button onClick={send} aria-label={t({ ru: "Отправить", tg: "Фиристодан" })} style={{ background: C.teal, border: "none", borderRadius: 12, width: 46, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-            <Send size={18} color={C.bg} />
+            <Send size={18} color={C.overlay} />
           </button>
         </div>
+      </div>
       </div>
     </div>
   );

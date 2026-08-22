@@ -1,8 +1,8 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Award, Briefcase, GraduationCap, Mail, MessageSquare, Medal, Phone, Trophy, type LucideIcon } from "lucide-react";
-import { C, FH, FB } from "@/lib/data";
+import { ArrowLeft, Award, Briefcase, GraduationCap, Mail, MessageSquare, Medal, Phone, Send, Trophy, type LucideIcon } from "lucide-react";
+import { C, FH, FB, SEED_APPLICANTS } from "@/lib/data";
 import { useAppState } from "@/lib/app-state";
 import { chatHref } from "@/lib/chat-window";
 import { useLocale, useT } from "@/lib/i18n";
@@ -10,16 +10,21 @@ import { useLocale, useT } from "@/lib/i18n";
 const ACH_TIER: Record<string, { icon: LucideIcon; color: string }> = {
   gold: { icon: Medal, color: C.gold }, silver: { icon: Medal, color: C.sub }, bronze: { icon: Medal, color: C.goldD }, special: { icon: Trophy, color: C.teal },
 };
+const DASH_INST_ID = 1;
 
 export default function ApplicantProfilePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { applicant } = useAppState();
+  const { applicant, role, myInstitution, hasResponded, addEmployerResponse } = useAppState();
   const { locale } = useLocale();
   const t = useT();
 
+  // сначала база кандидатов, иначе — собственный профиль текущего пользователя;
   // "по отклику" тоже открывается по прямой ссылке (её присылают из чата/вакансии) — скрыт только draft
-  const found = applicant.id === params.id && applicant.visibility !== "draft" ? applicant : null;
+  const seedFound = SEED_APPLICANTS.find((a) => a.id === params.id);
+  const found = seedFound ?? (applicant.id === params.id && applicant.visibility !== "draft" ? applicant : null);
+  const instId = myInstitution?.id ?? DASH_INST_ID;
+  const responded = found ? hasResponded(found.id, instId) : false;
 
   if (!found) {
     return (
@@ -68,6 +73,14 @@ export default function ApplicantProfilePage() {
             <button onClick={() => router.push(chatHref())} style={{ marginTop: 8, width: "100%", padding: "10px", borderRadius: 12, background: C.teal, color: C.overlay, fontFamily: FH, fontWeight: 700, fontSize: 13.5, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, cursor: "pointer", border: "none" }}>
               <MessageSquare size={14} /> {t("common.write")}
             </button>
+            {role === "institution" && (
+              <button
+                onClick={() => { if (!responded) addEmployerResponse(found.id, instId, t({ ru: "Мы заинтересованы в вашем профиле — напишите нам в чат.", tg: "Мо ба профили шумо шавқмандем — дар чат ба мо нависед." })); }}
+                disabled={responded}
+                style={{ width: "100%", padding: "10px", borderRadius: 12, background: responded ? C.s2 : `${C.teal}18`, border: `1px solid ${responded ? C.border : C.teal + "44"}`, color: responded ? C.dim : C.teal, fontFamily: FH, fontWeight: 700, fontSize: 13.5, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, cursor: responded ? "default" : "pointer" }}>
+                <Send size={14} /> {responded ? t({ ru: "Вы откликнулись", tg: "Шумо ҷавоб додед" }) : t({ ru: "Откликнуться", tg: "Ҷавоб додан" })}
+              </button>
+            )}
           </div>
         </div>
 

@@ -65,7 +65,7 @@ function InstitutionProfileInner() {
   const router = useRouter();
   const instId = Number(params.id);
   const t = useT();
-  const { children_: children, hasApplied, addApplication } = useAppState();
+  const { children_: children, hasApplied, addApplication, myInstitution } = useAppState();
   const { ref: staffRef, visible: staffVisible } = useReveal<HTMLDivElement>();
 
   const [tab, setTab] = useState<Tab>(() => (searchParams.get("tab") as Tab) ?? "about");
@@ -78,6 +78,9 @@ function InstitutionProfileInner() {
   const [metricScores, setMetricScores] = useState<number[]>(() => INSTITUTIONS.find(i=>i.id===instId)?.metrics.map(()=>5) ?? []);
   const [reviewText, setReviewText] = useState("");
   const [reviewToast, setReviewToast] = useState<string|null>(null);
+  const [visitName, setVisitName] = useState("");
+  const [visitPhone, setVisitPhone] = useState("");
+  const [visitDate, setVisitDate] = useState("");
 
   const highlightReviewId = searchParams.get("review");
   const highlightVacancyId = searchParams.get("vacancy");
@@ -94,7 +97,8 @@ function InstitutionProfileInner() {
     el?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [highlightVacancyId, tab]);
 
-  const inst = INSTITUTIONS.find(i=>i.id===instId) ?? INSTITUTIONS[0];
+  const seedInst = INSTITUTIONS.find(i=>i.id===instId);
+  const inst = seedInst ?? (myInstitution?.id===instId ? myInstitution : INSTITUTIONS[0]);
   const staff = ALL_STAFF.filter(p=>p.instId===inst.id);
   const reviews = [...addedReviews, ...REVIEWS.filter(r=>r.instId===inst.id)];
   const news = NEWS_ITEMS.filter(n => n.status === "published" && n.instId === inst.id);
@@ -157,7 +161,7 @@ function InstitutionProfileInner() {
           <div>
             <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
               <span style={{fontSize:12,fontWeight:700,padding:"4px 10px",borderRadius:7,background:inst.color,color:C.overlay,fontFamily:FH}}>{t(meta.label)}</span>
-              {inst.ver && <span style={{fontSize:12,fontWeight:700,padding:"4px 10px",borderRadius:7,background:`${C.ok}22`,border:`1px solid ${C.ok}`,color:C.ok,fontFamily:FH,display:"flex",alignItems:"center",gap:4}}><CheckCircle size={11}/> {t("common.verified")}</span>}
+              {inst.ver && <Link href="/company" style={{fontSize:12,fontWeight:700,padding:"4px 10px",borderRadius:7,background:`${C.ok}22`,border:`1px solid ${C.ok}`,color:C.ok,fontFamily:FH,display:"flex",alignItems:"center",gap:4,textDecoration:"none"}}><CheckCircle size={11}/> {t("common.verified")}</Link>}
               {inst.tag && <span style={{fontSize:12,fontWeight:700,padding:"4px 10px",borderRadius:7,background:`${C.gold}22`,border:`1px solid ${C.gold}`,color:C.gold,fontFamily:FH}}>{t(inst.tag)}</span>}
             </div>
             <h1 style={{fontFamily:FH,fontWeight:900,fontSize:"clamp(22px,3vw,36px)",color:"#fff",lineHeight:1.1,marginBottom:6}}>{t(inst.name)}</h1>
@@ -265,16 +269,10 @@ function InstitutionProfileInner() {
               {/* features */}
               <div style={{borderRadius:18,border:`1px solid ${C.border}`,background:C.s1,padding:26}}>
                 <h3 style={{fontFamily:FH,fontWeight:800,fontSize:17,color:C.text,marginBottom:16}}>{t({ru:"Услуги и возможности",tg:"Хизматрасонӣ ва имконот"})}</h3>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:10}}>
                   {([
                     {key:"transport" as AmenityKey,v:inst.transport},
                     {key:"food" as AmenityKey,v:inst.food},
-                    {key:"psychologist" as AmenityKey,v:true},
-                    {key:"gym" as AmenityKey,v:true},
-                    {key:"library" as AmenityKey,v:true},
-                    {key:"medical" as AmenityKey,v:true},
-                    {key:"cctv" as AmenityKey,v:true},
-                    {key:"wifi" as AmenityKey,v:true},
                   ]).map(f=>{
                     const info = AMENITY_INFO[f.key];
                     const Icon = info.icon;
@@ -344,10 +342,18 @@ function InstitutionProfileInner() {
 
               <div style={{borderRadius:18,border:`1px solid ${C.border}`,background:C.s1,padding:22}}>
                 <h3 style={{fontFamily:FH,fontWeight:800,fontSize:16,color:C.text,marginBottom:14}}>{t({ru:"Записаться на визит",tg:"Ба ташриф сабти ном шудан"})}</h3>
-                {[t({ru:"Ваше имя",tg:"Номи шумо"}),t({ru:"Телефон",tg:"Телефон"}),t({ru:"Дата",tg:"Сана"})].map(pl=>(
-                  <input key={pl} placeholder={pl} style={{display:"block",width:"100%",padding:"9px 12px",borderRadius:9,border:`1px solid ${C.border}`,background:C.s2,color:C.text,fontFamily:FB,fontSize:13.5,outline:"none",marginBottom:8,boxSizing:"border-box"}}/>
-                ))}
-                <button style={{width:"100%",padding:11,borderRadius:10,background:C.s3,color:C.text,fontFamily:FH,fontWeight:700,fontSize:13.5,border:"none",cursor:"pointer",marginTop:4}}>{t({ru:"Отправить заявку",tg:"Аризаро фиристодан"})}</button>
+                <input value={visitName} onChange={e=>setVisitName(e.target.value)} placeholder={t({ru:"Ваше имя",tg:"Номи шумо"})} style={{display:"block",width:"100%",padding:"9px 12px",borderRadius:9,border:`1px solid ${C.border}`,background:C.s2,color:C.text,fontFamily:FB,fontSize:13.5,outline:"none",marginBottom:8,boxSizing:"border-box"}}/>
+                <input value={visitPhone} onChange={e=>setVisitPhone(e.target.value)} placeholder={t({ru:"Телефон",tg:"Телефон"})} style={{display:"block",width:"100%",padding:"9px 12px",borderRadius:9,border:`1px solid ${C.border}`,background:C.s2,color:C.text,fontFamily:FB,fontSize:13.5,outline:"none",marginBottom:8,boxSizing:"border-box"}}/>
+                <input value={visitDate} onChange={e=>setVisitDate(e.target.value)} type="date" placeholder={t({ru:"Дата",tg:"Сана"})} style={{display:"block",width:"100%",padding:"9px 12px",borderRadius:9,border:`1px solid ${C.border}`,background:C.s2,color:C.text,fontFamily:FB,fontSize:13.5,outline:"none",marginBottom:8,boxSizing:"border-box"}}/>
+                <button
+                  disabled={!visitName.trim() || !visitPhone.trim()}
+                  onClick={()=>{
+                    setReviewToast(t({ ru: "Заявка на визит отправлена", tg: "Дархости ташриф фиристода шуд" }));
+                    setVisitName(""); setVisitPhone(""); setVisitDate("");
+                  }}
+                  style={{width:"100%",padding:11,borderRadius:10,background:C.teal,color:C.overlay,fontFamily:FH,fontWeight:800,fontSize:13.5,border:"none",cursor:"pointer",marginTop:4,opacity:(!visitName.trim()||!visitPhone.trim())?0.5:1}}>
+                  {t({ru:"Отправить заявку",tg:"Аризаро фиристодан"})}
+                </button>
               </div>
             </div>
           </div>
@@ -528,16 +534,20 @@ function InstitutionProfileInner() {
                 <p style={{fontFamily:FH,fontWeight:900,fontSize:52,color:C.text,lineHeight:1}}>{inst.score}</p>
                 <Stars s={inst.score} size={18}/>
                 <p style={{fontSize:13,color:C.sub,marginTop:8}}>{inst.rev} {t("common.reviews")}</p>
-                <p style={{fontSize:11,color:C.dim,marginTop:6}}>{t({ru:"9 независимых метрик",tg:"9 меъёри мустақил"})}</p>
+                <p style={{fontSize:11,color:C.dim,marginTop:6}}>{t({ru:"8 независимых метрик",tg:"8 меъёри мустақил"})}</p>
                 <div style={{marginTop:16}}>
-                  {[5,4,3,2,1].map(n=>(
-                    <div key={n} style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
-                      <span style={{fontSize:12.5,color:C.sub,width:12}}>{n}</span>
-                      <div style={{flex:1,height:6,borderRadius:999,background:C.s3}}>
-                        <div style={{height:"100%",borderRadius:999,background:C.gold,width:`${n===5?65:n===4?25:n===3?7:3}%`}}/>
+                  {[5,4,3,2,1].map(n=>{
+                    const countN = reviews.filter(r=>Math.round(r.score)===n).length;
+                    const pct = reviews.length ? Math.round((countN/reviews.length)*100) : 0;
+                    return (
+                      <div key={n} style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+                        <span style={{fontSize:12.5,color:C.sub,width:12}}>{n}</span>
+                        <div style={{flex:1,height:6,borderRadius:999,background:C.s3}}>
+                          <div style={{height:"100%",borderRadius:999,background:C.gold,width:`${pct}%`}}/>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
               <div style={{display:"flex",flexDirection:"column",gap:14}}>

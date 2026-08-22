@@ -3,8 +3,9 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MapPin } from "lucide-react";
-import { C, FH, FB, INSTITUTIONS, CATEGORY_META, REGION_LABEL, REGION_ORDER, type Region } from "@/lib/data";
+import { C, FH, FB, CATEGORY_META, REGION_LABEL, REGION_ORDER, type Region } from "@/lib/data";
 import { RegionMap, type Bbox } from "@/components/InstMap";
+import { useVisibleInstitutions } from "@/lib/app-state";
 import { useT } from "@/lib/i18n";
 
 const REGION_BBOX: Record<Region, Bbox> = {
@@ -20,10 +21,11 @@ export default function MapPage() {
   const router = useRouter();
   const t = useT();
   const [regionFilter, setRegionFilter] = useState<Region | null>(null);
+  const institutions = useVisibleInstitutions();
 
   const list = useMemo(
-    () => INSTITUTIONS.filter((i) => i.geo && (!regionFilter || i.region === regionFilter)),
-    [regionFilter]
+    () => institutions.filter((i) => i.geo && (!regionFilter || i.region === regionFilter)),
+    [institutions, regionFilter]
   );
   const bbox = regionFilter ? REGION_BBOX[regionFilter] : ALL_BBOX;
   const points = list.map((i) => ({

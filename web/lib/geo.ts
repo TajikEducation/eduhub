@@ -1,7 +1,7 @@
 import type { Region } from "./data";
 
 // Approximate city/region centroids for Tajikistan (WGS84).
-const REGION_CENTROIDS: Record<Region, { lat: number; lng: number }> = {
+export const REGION_CENTROIDS: Record<Region, { lat: number; lng: number }> = {
   dushanbe: { lat: 38.5598, lng: 68.787 },
   sughd: { lat: 40.2833, lng: 69.6333 },
   khatlon: { lat: 37.8606, lng: 68.7803 },

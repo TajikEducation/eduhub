@@ -1,7 +1,57 @@
 "use client";
-import { LayoutDashboard, Users, MessageSquare, BarChart2 } from "lucide-react";
-import { PHOTOS, C } from "@/lib/data";
+import { LayoutDashboard, Users, MessageSquare, BarChart2, Check } from "lucide-react";
+import { PHOTOS, C, FH } from "@/lib/data";
+import { useAppState } from "@/lib/app-state";
+import { useT } from "@/lib/i18n";
 import { GuidePage } from "@/components/GuidePage";
+
+const TIERS = [
+  { name: "Free", points: [
+    { ru: "Профиль учреждения", tg: "Профили муассиса" },
+    { ru: "Новости и вакансии", tg: "Хабарҳо ва ҷойҳои холӣ" },
+    { ru: "Ответы на отзывы", tg: "Ҷавоб ба шарҳҳо" },
+  ] },
+  { name: "Pro", points: [
+    { ru: "Всё из Free", tg: "Ҳама аз Free" },
+    { ru: "Выше в результатах поиска", tg: "Дар ҷустуҷӯ баландтар" },
+    { ru: "Расширенная аналитика", tg: "Таҳлили васеъ" },
+  ] },
+  { name: "Enterprise", points: [
+    { ru: "Всё из Pro", tg: "Ҳама аз Pro" },
+    { ru: "Приоритет на главной", tg: "Афзалият дар саҳифаи асосӣ" },
+  ] },
+] as const;
+
+function TiersCard() {
+  const t = useT();
+  const { platformSettings } = useAppState();
+  const priceLabel = (name: string) => {
+    if (name === "Free") return t({ ru: "Бесплатно", tg: "Ройгон" });
+    if (name === "Pro") return `$${platformSettings.tierPrices.pro}${t({ ru: "/мес", tg: "/моҳ" })}`;
+    return `$${platformSettings.tierPrices.enterprise}${t({ ru: "/мес", tg: "/моҳ" })}`;
+  };
+  return (
+    <div style={{ maxWidth: 1080, margin: "0 auto", padding: "0 28px 48px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 14 }}>
+        {TIERS.map(tier => (
+          <div key={tier.name} style={{ borderRadius: 16, border: `1px solid ${C.border}`, background: C.s1, padding: 20 }}>
+            <p style={{ fontFamily: FH, fontWeight: 800, fontSize: 15, color: C.text, marginBottom: 4 }}>{tier.name}</p>
+            <p style={{ fontFamily: FH, fontWeight: 900, fontSize: 20, color: C.red, marginBottom: 14 }}>{priceLabel(tier.name)}</p>
+            {tier.points.map(p => (
+              <div key={p.ru} style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 8 }}>
+                <Check size={14} style={{ color: C.ok, flexShrink: 0, marginTop: 2 }} />
+                <span style={{ fontSize: 13, color: C.sub, lineHeight: 1.5 }}>{t(p)}</span>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+      <p style={{ fontSize: 12.5, color: C.dim, textAlign: "center", marginTop: 14 }}>
+        {t({ ru: "Ни один тариф не влияет на значение рейтинга — оценка формируется только отзывами", tg: "Ҳеҷ тариф ба арзиши рейтинг таъсир намерасонад — баҳо танҳо аз шарҳҳо ташкил мешавад" })}
+      </p>
+    </div>
+  );
+}
 
 export default function InstitutionsGuidePage() {
   return (
@@ -14,10 +64,11 @@ export default function InstitutionsGuidePage() {
         ru: "Бесплатный тариф покрывает профиль, новости и ответы на отзывы. Платные тарифы Pro и Enterprise открывают расширенную аналитику.",
         tg: "Тарифи ройгон профил, хабарҳо ва ҷавоб ба шарҳҳоро дар бар мегирад. Тарифҳои пулакии Pro ва Enterprise таҳлили васеъро мекушоянд.",
       }}
-      ctaLabel={{ ru: "Перейти в кабинет учреждения", tg: "Ба кабинети муассиса гузаред" }}
-      ctaHref="/dashboard"
+      ctaLabel={{ ru: "Зарегистрировать учреждение", tg: "Муассисаро ба қайд гирифтан" }}
+      ctaHref="/register-institution"
       secondaryLabel={{ ru: "Посмотреть пример профиля", tg: "Намунаи профилро бинед" }}
       secondaryHref="/institutions/1"
+      extra={<TiersCard/>}
       steps={[
         { icon: LayoutDashboard, screenshot: "/guide/inst-1-overview.png", title: { ru: "Зарегистрируйте профиль и подтвердите полномочия", tg: "Профилро сабт кунед ва ваколатро тасдиқ кунед" }, desc: { ru: "Заполните тип, район, стоимость, контакты — плюс документ, подтверждающий вашу должность в учреждении. Это защищает профиль от захвата посторонним и повышает доверие родителей с первого дня.", tg: "Навъ, ноҳия, нарх, тамосро пур кунед — ба илова ҳуҷҷате, ки мансаби шуморо дар муассиса тасдиқ мекунад. Ин профилро аз забти бегона ҳифз мекунад ва боварии волидайнро аз рӯзи аввал зиёд мекунад." } },
         { icon: Users, screenshot: "/guide/inst-2-staff.png", title: { ru: "Добавьте персонал с фото и достижениями", tg: "Кормандонро бо акс ва дастовард илова кунед" }, desc: { ru: "Родители изучают профили конкретных педагогов перед выбором — образование, опыт, награды. Пустой раздел «Персонал» выглядит подозрительно на фоне конкурентов, у которых он заполнен.", tg: "Волидайн пеш аз интихоб профилҳои омӯзгорони мушаххасро меомӯзанд — таҳсилот, таҷриба, мукофотҳо. Бахши холии «Кормандон» дар муқоиса бо рақибони пуркарда шубҳанок менамояд." } },

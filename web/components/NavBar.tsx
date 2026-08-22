@@ -24,6 +24,8 @@ const GUIDE_LINKS: { href: string; key: string }[] = [
 const ROLE_OPTIONS: { value: Role; key: string; href: string }[] = [
   { value: "user", key: "nav.role.user", href: "/account" },
   { value: "institution", key: "nav.role.institution", href: "/dashboard" },
+  { value: "moderator", key: "nav.role.moderator", href: "/moderator" },
+  { value: "admin", key: "nav.role.admin", href: "/admin" },
 ];
 
 function useOutsideClose<T extends HTMLElement>() {

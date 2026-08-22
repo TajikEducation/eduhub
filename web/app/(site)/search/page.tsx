@@ -4,9 +4,10 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Search, SlidersHorizontal, ChevronDown, X, Map } from "lucide-react";
-import { C, FH, FB, INSTITUTIONS, CATEGORY_META, REGION_LABEL, REGION_ORDER, type CategoryKey } from "@/lib/data";
+import { C, FH, FB, CATEGORY_META, REGION_LABEL, REGION_ORDER, type CategoryKey } from "@/lib/data";
 import { InstitCard } from "@/components/InstitCard";
 import { useReveal, revealStyle } from "@/lib/useReveal";
+import { useVisibleInstitutions } from "@/lib/app-state";
 import { useT } from "@/lib/i18n";
 
 type SortKey = "score"|"price_asc"|"price_desc"|"reviews";
@@ -91,7 +92,8 @@ function SearchPageInner() {
 
   const clearAll = () => { setTypeF(null); setRegionF(null); setAreaF([]); setRatingF(0); setTransF(false); setFoodF(false); setVerF(false); setMinPrice(0); setMaxPrice(2000); };
 
-  let results = INSTITUTIONS.filter(i => {
+  const institutions = useVisibleInstitutions();
+  let results = institutions.filter(i => {
     if(q) {
       const needle = q.toLowerCase();
       const hay = [i.name.ru, i.name.tg, i.area, t(CATEGORY_META[i.tk].label)].join(" ").toLowerCase();

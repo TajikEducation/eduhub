@@ -1,12 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Briefcase, Wallet, Clock, ChevronRight } from "lucide-react";
-import { C, FH, PHOTOS, VACANCIES, INSTITUTIONS, CATEGORY_META, type Vacancy, type Institution } from "@/lib/data";
+import { Briefcase, Wallet, Clock, ChevronRight, Search, X } from "lucide-react";
+import { C, FH, FB, PHOTOS, VACANCIES, INSTITUTIONS, CATEGORY_META, REGION_LABEL, REGION_ORDER, type Vacancy, type Institution, type CategoryKey, type Region } from "@/lib/data";
 import { SubjectMotifs } from "@/components/SubjectMotifs";
 import { useReveal, revealStyle } from "@/lib/useReveal";
 import { useT } from "@/lib/i18n";
+
+const CATEGORY_KEYS: CategoryKey[] = ["cat_kg", "cat_school", "cat_center", "cat_uni"];
+
+function Chip({ l, on, click }: { l: string; on: boolean; click: () => void }) {
+  return (
+    <button onClick={click} style={{ fontSize: 12.5, fontWeight: 600, padding: "6px 12px", borderRadius: 8, border: `1px solid ${on ? C.teal : C.border}`, background: on ? `${C.teal}22` : "transparent", color: on ? C.teal : C.sub, fontFamily: FH, whiteSpace: "nowrap", cursor: "pointer" }}>
+      {l}
+    </button>
+  );
+}
 
 function VacancyRow({ v, inst, style }: { v: Vacancy; inst: Institution | undefined; style: React.CSSProperties }) {
   const t = useT();
@@ -46,8 +56,31 @@ function VacancyRow({ v, inst, style }: { v: Vacancy; inst: Institution | undefi
 
 export default function VacanciesPage() {
   const t = useT();
-  const { ref, visible } = useReveal<HTMLDivElement>();
-  const vacancies = VACANCIES.filter(v => v.status === "published");
+  const { ref, visible } = useReveal<HTMLDivElement>({ threshold: 0 });
+  const [q, setQ] = useState("");
+  const [regionF, setRegionF] = useState<Region | null>(null);
+  const [typeF, setTypeF] = useState<CategoryKey | null>(null);
+  const [fullTimeOnly, setFullTimeOnly] = useState(false);
+
+  const withInst = useMemo(
+    () => VACANCIES.filter(v => v.status === "published").map(v => ({ v, inst: INSTITUTIONS.find(x => x.id === v.instId) })),
+    []
+  );
+
+  const vacancies = useMemo(() => withInst.filter(({ v, inst }) => {
+    if (q) {
+      const needle = q.toLowerCase();
+      const hay = [t(v.title), inst ? t(inst.name) : ""].join(" ").toLowerCase();
+      if (!hay.includes(needle)) return false;
+    }
+    if (regionF && inst?.region !== regionF) return false;
+    if (typeF && inst?.tk !== typeF) return false;
+    if (fullTimeOnly && v.employment.ru !== "Полная занятость") return false;
+    return true;
+  }).map(({ v }) => v), [withInst, q, regionF, typeF, fullTimeOnly, t]);
+
+  const activeCount = [regionF !== null, typeF !== null, fullTimeOnly].filter(Boolean).length;
+  const clearAll = () => { setRegionF(null); setTypeF(null); setFullTimeOnly(false); };
 
   return (
     <div>
@@ -65,7 +98,7 @@ export default function VacanciesPage() {
               {t({ ru: "Вакансии в образовательных учреждениях", tg: "Ҷойҳои холӣ дар муассисаҳои таълимӣ" })}
             </h1>
             <p style={{ fontSize: 14.5, color: "rgba(255,255,255,.72)", maxWidth: 560 }}>
-              {t({ ru: "Открытые вакансии от школ, детских садов, центров и вузов Таджикистана", tg: "Ҷойҳои холии кушода аз мактабҳо, боғчаҳо, марказҳо ва донишгоҳҳои Тоҷикистон" })}
+              {t({ ru: "Открытые вакансии от школ, детских садов, учебных центров и вузов Таджикистана", tg: "Ҷойҳои холии кушода аз мактабҳо, боғчаҳо, марказҳои таълимӣ ва донишгоҳҳои Тоҷикистон" })}
             </p>
           </div>
         </div>
@@ -81,6 +114,33 @@ export default function VacanciesPage() {
             {t("tab.candidates")}
           </Link>
         </div>
+
+        {/* ── FILTERS ── */}
+        <div style={{ borderRadius: 16, border: `1px solid ${C.border}`, background: C.s1, padding: 16, marginBottom: 20, display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, borderRadius: 10, border: `1px solid ${C.border}`, background: C.s2, padding: "9px 14px" }}>
+            <Search size={15} style={{ color: C.dim, flexShrink: 0 }} />
+            <input value={q} onChange={e => setQ(e.target.value)} placeholder={t({ ru: "Должность или учреждение…", tg: "Вазифа ё муассиса…" })}
+              style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 13.5, color: C.text, fontFamily: FB }} />
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            {CATEGORY_KEYS.map(k => (
+              <Chip key={k} l={t(CATEGORY_META[k].label)} on={typeF === k} click={() => setTypeF(typeF === k ? null : k)} />
+            ))}
+            <span style={{ width: 1, height: 18, background: C.border, margin: "0 2px" }} />
+            <select value={regionF ?? ""} onChange={e => setRegionF((e.target.value || null) as Region | null)}
+              style={{ fontSize: 12.5, fontWeight: 600, padding: "6px 10px", borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", color: regionF ? C.teal : C.sub, fontFamily: FH, cursor: "pointer" }}>
+              <option value="">{t("nav.allRegions")}</option>
+              {REGION_ORDER.map(r => <option key={r} value={r}>{t(REGION_LABEL[r])}</option>)}
+            </select>
+            <Chip l={t({ ru: "Полная занятость", tg: "Шуғли пурра" })} on={fullTimeOnly} click={() => setFullTimeOnly(v => !v)} />
+            {activeCount > 0 && (
+              <button onClick={clearAll} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: C.dim, background: "none", border: "none", cursor: "pointer", fontFamily: FH, fontWeight: 600 }}>
+                <X size={13} /> {t({ ru: "Сбросить", tg: "Тоза кардан" })}
+              </button>
+            )}
+          </div>
+        </div>
+
         {vacancies.length === 0 ? (
           <div style={{ padding: 56, borderRadius: 16, border: `1px dashed ${C.border}`, textAlign: "center", color: C.muted }}>
             <p style={{ fontFamily: FH, fontWeight: 800, fontSize: 17, color: C.text }}>{t("empty.vacancies")}</p>

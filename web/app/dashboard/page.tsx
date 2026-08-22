@@ -3,12 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { useRouter } from "next/navigation";
 import {
-  LayoutDashboard, Newspaper, Users, Star, Settings, Plus, Pencil, Trash2, X, LogOut, Briefcase, Award, UserSquare2, Camera, type LucideIcon,
+  LayoutDashboard, Newspaper, Users, Star, Settings, Plus, Pencil, Trash2, X, LogOut, Briefcase, Award, UserSquare2, Camera, ArrowLeft, Clock, type LucideIcon,
 } from "lucide-react";
 import {
-  C, FH, FB, INSTITUTIONS, ALL_STAFF, REVIEWS, NEWS_ITEMS, VACANCIES, VACANCY_CANDIDATES, PHOTOS, CATEGORY_META, REGION_LABEL, REGION_ORDER,
-  type Person, type NewsArticle, type Vacancy, type Achievement, type Alumnus, type Bi, type Region,
+  C, FH, FB, INSTITUTIONS, ALL_STAFF, REVIEWS, NEWS_ITEMS, VACANCIES, VACANCY_CANDIDATES, SEED_APPLICANTS, PHOTOS, CATEGORY_META, REGION_LABEL, REGION_ORDER,
+  type Person, type NewsArticle, type Vacancy, type Achievement, type Alumnus, type Bi, type Region, type Institution,
 } from "@/lib/data";
 import { Modal } from "@/components/ui/Modal";
 import { Toast } from "@/components/Toast";
@@ -45,16 +46,64 @@ const WEEK_TREND = [
   { day: "Вс", views: 33, responses: 3 },
 ];
 
+const DEMO_FALLBACK = INSTITUTIONS.find((i) => i.id === DASH_INST_ID)!;
+
+function PendingScreen({ inst, router, t }: { inst: Institution; router: ReturnType<typeof useRouter>; t: ReturnType<typeof useT> }) {
+  return (
+    <div style={{ display: "flex", flex: 1, alignItems: "center", justifyContent: "center", minHeight: "70vh", padding: 32 }}>
+      <div style={{ maxWidth: 480, textAlign: "center" }}>
+        <button onClick={() => (window.history.length > 1 ? router.back() : router.push("/"))} style={{ display: "inline-flex", alignItems: "center", gap: 7, fontFamily: FH, fontWeight: 700, fontSize: 13.5, color: C.teal, marginBottom: 24, padding: "8px 14px", borderRadius: 9, border: `1px solid ${C.teal}40`, background: `${C.teal}10`, cursor: "pointer" }}>
+          <ArrowLeft size={15} /> {t("common.back")}
+        </button>
+        <div style={{ width: 56, height: 56, borderRadius: 16, background: `${C.gold}18`, border: `1px solid ${C.gold}44`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 18px" }}>
+          <Clock size={26} style={{ color: C.gold }} />
+        </div>
+        <h1 style={{ fontFamily: FH, fontWeight: 900, fontSize: 22, color: C.text, marginBottom: 10 }}>
+          {t({ ru: "Заявка на рассмотрении", tg: "Ариза дар баррасӣ аст" })}
+        </h1>
+        <p style={{ fontSize: 14, color: C.sub, lineHeight: 1.6, marginBottom: 20 }}>
+          {t({ ru: "Модератор проверяет данные учреждения «", tg: "Модератор маълумоти муассисаи «" })}{inst.name.ru}{t({ ru: "» — обычно это занимает до 48 часов. Как только заявка одобрена, профиль появится в общем каталоге и станет доступен весь функционал кабинета.", tg: "»-ро месанҷад — то 48 соат. Пас аз тасдиқ профил дар каталоги умумӣ пайдо мешавад." })}
+        </p>
+        <a href={`/institutions/${inst.id}`} style={{ display: "inline-flex", alignItems: "center", gap: 6, fontFamily: FH, fontWeight: 700, fontSize: 13.5, color: C.teal, textDecoration: "none" }}>
+          {t({ ru: "Предпросмотр профиля", tg: "Пешнамоиши профил" })} →
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function RejectedScreen({ router, t }: { router: ReturnType<typeof useRouter>; t: ReturnType<typeof useT> }) {
+  return (
+    <div style={{ display: "flex", flex: 1, alignItems: "center", justifyContent: "center", minHeight: "70vh", padding: 32 }}>
+      <div style={{ maxWidth: 440, textAlign: "center" }}>
+        <button onClick={() => (window.history.length > 1 ? router.back() : router.push("/"))} style={{ display: "inline-flex", alignItems: "center", gap: 7, fontFamily: FH, fontWeight: 700, fontSize: 13.5, color: C.teal, marginBottom: 24, padding: "8px 14px", borderRadius: 9, border: `1px solid ${C.teal}40`, background: `${C.teal}10`, cursor: "pointer" }}>
+          <ArrowLeft size={15} /> {t("common.back")}
+        </button>
+        <h1 style={{ fontFamily: FH, fontWeight: 900, fontSize: 22, color: C.text, marginBottom: 10 }}>
+          {t({ ru: "Заявка отклонена", tg: "Ариза рад карда шуд" })}
+        </h1>
+        <p style={{ fontSize: 14, color: C.sub, lineHeight: 1.6, marginBottom: 20 }}>
+          {t({ ru: "Модератор не смог подтвердить данные учреждения. Свяжитесь с нами, чтобы уточнить причину.", tg: "Модератор маълумоти муассисаро тасдиқ карда натавонист." })}
+        </p>
+        <a href="/company" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontFamily: FH, fontWeight: 700, fontSize: 13.5, color: C.teal, textDecoration: "none" }}>
+          {t({ ru: "Написать нам", tg: "Ба мо нависед" })} →
+        </a>
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
-  const inst0 = INSTITUTIONS.find((i) => i.id === DASH_INST_ID)!;
-  const { locale } = useAppState();
+  const { locale, myInstitution, applicant } = useAppState();
+  const inst0 = myInstitution ?? DEMO_FALLBACK;
   const t = useT();
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>("overview");
   const [settingsTab, setSettingsTab] = useState<SettingsTab>("info");
   const [toast, setToast] = useState<string | null>(null);
 
   // ── news ──
-  const [articles, setArticles] = useState<NewsArticle[]>(NEWS_ITEMS.filter((n) => n.instId === DASH_INST_ID));
+  const [articles, setArticles] = useState<NewsArticle[]>(NEWS_ITEMS.filter((n) => n.instId === inst0.id));
   const [newsForm, setNewsForm] = useState<NewsArticle | null>(null);
 
   function newArticle() {
@@ -201,6 +250,9 @@ export default function DashboardPage() {
     setToast(t({ru:"Настройки сохранены",tg:"Танзимот нигоҳ дошта шуд"}));
   }
 
+  if (myInstitution?.status === "pending") return <PendingScreen inst={myInstitution} router={router} t={t} />;
+  if (myInstitution?.status === "rejected") return <RejectedScreen router={router} t={t} />;
+
   return (
     <div style={{ display: "flex", fontFamily: FB, background: C.bg, color: C.text }}>
       {/* ── SIDEBAR ── */}
@@ -227,6 +279,9 @@ export default function DashboardPage() {
 
       {/* ── CONTENT ── */}
       <div style={{ flex: 1, padding: "28px 32px 80px", overflowX: "hidden" }}>
+        <button onClick={() => (window.history.length > 1 ? router.back() : router.push("/"))} style={{ display: "inline-flex", alignItems: "center", gap: 7, fontFamily: FH, fontWeight: 700, fontSize: 13.5, color: C.teal, marginBottom: 20, padding: "8px 14px", borderRadius: 9, border: `1px solid ${C.teal}40`, background: `${C.teal}10`, cursor: "pointer" }}>
+          <ArrowLeft size={15} /> {t("common.back")}
+        </button>
         {tab === "overview" && (
           <div>
             <h1 style={{ fontFamily: FH, fontWeight: 900, fontSize: 24, marginBottom: 22 }}>{t("dash.overview")}</h1>
@@ -413,13 +468,17 @@ export default function DashboardPage() {
                     </span>
                     {candidates.length > 0 && (
                       <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "6px 10px" }}>
-                        {candidates.map((c) => (
-                          <span key={c.id} style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 10px 4px 4px", borderRadius: 999, background: C.s2, border: `1px solid ${C.border}` }}>
-                            <img src={c.photo} alt="" style={{ width: 22, height: 22, borderRadius: "50%", objectFit: "cover" }} />
-                            <span style={{ fontSize: 12, color: C.text }}>{t(c.name)}</span>
-                            <span style={{ fontSize: 11, color: C.dim }}>· {c.appliedAt}</span>
-                          </span>
-                        ))}
+                        {candidates.map((c) => {
+                          const prof = c.applicantId === applicant.id ? applicant : SEED_APPLICANTS.find((a) => a.id === c.applicantId);
+                          if (!prof) return null;
+                          return (
+                            <Link key={c.id} href={`/applicants/${c.applicantId}`} style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 10px 4px 4px", borderRadius: 999, background: C.s2, border: `1px solid ${C.border}`, textDecoration: "none" }}>
+                              <img src={prof.photo} alt="" style={{ width: 22, height: 22, borderRadius: "50%", objectFit: "cover" }} />
+                              <span style={{ fontSize: 12, color: C.text }}>{t(prof.name)}</span>
+                              <span style={{ fontSize: 11, color: C.dim }}>· {c.appliedAt}</span>
+                            </Link>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
