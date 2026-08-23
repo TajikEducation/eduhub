@@ -13,6 +13,7 @@ export type Locale = "ru" | "tg";
 export const UI_STRINGS: Record<string, Bi> = {
   // nav
   "nav.home": { ru: "Главная", tg: "Асосӣ" },
+  "nav.menu": { ru: "Меню", tg: "Меню" },
   "nav.search": { ru: "Каталог", tg: "Каталог" },
   "nav.vacancies": { ru: "Вакансии", tg: "Ҷойҳои холӣ" },
   "nav.about": { ru: "О нас", tg: "Дар бораи мо" },

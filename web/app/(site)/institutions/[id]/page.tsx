@@ -65,7 +65,7 @@ function InstitutionProfileInner() {
   const router = useRouter();
   const instId = Number(params.id);
   const t = useT();
-  const { children_: children, hasApplied, addApplication, myInstitution } = useAppState();
+  const { children_: children, myInstitution } = useAppState();
   const { ref: staffRef, visible: staffVisible } = useReveal<HTMLDivElement>();
 
   const [tab, setTab] = useState<Tab>(() => (searchParams.get("tab") as Tab) ?? "about");
@@ -92,10 +92,10 @@ function InstitutionProfileInner() {
   }, [highlightReviewId, tab]);
 
   useEffect(() => {
-    if (!highlightVacancyId || tab !== "vacancies") return;
-    const el = document.getElementById(`vacancy-${highlightVacancyId}`);
-    el?.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [highlightVacancyId, tab]);
+    // старый deep-link ?tab=vacancies&vacancy=id — полный текст вакансии теперь только на /vacancies/[id]
+    if (!highlightVacancyId) return;
+    router.replace(`/vacancies/${highlightVacancyId}`);
+  }, [highlightVacancyId, router]);
 
   const seedInst = INSTITUTIONS.find(i=>i.id===instId);
   const inst = seedInst ?? (myInstitution?.id===instId ? myInstitution : INSTITUTIONS[0]);
@@ -197,7 +197,7 @@ function InstitutionProfileInner() {
 
         {/* ABOUT */}
         {tab==="about" && (
-          <div style={{display:"grid",gridTemplateColumns:"1fr 320px",gap:24,alignItems:"start"}}>
+          <div className="eh-mobile-1col" style={{display:"grid",gridTemplateColumns:"1fr 320px",gap:24,alignItems:"start"}}>
             <div style={{display:"flex",flexDirection:"column",gap:20}}>
               <div style={{borderRadius:18,border:`1px solid ${C.border}`,background:C.s1,padding:26}}>
                 <h2 style={{fontFamily:FH,fontWeight:800,fontSize:19,color:C.text,marginBottom:14}}>{t("tab.about")}</h2>
@@ -212,7 +212,7 @@ function InstitutionProfileInner() {
               </div>
 
               {/* key facts */}
-              <div style={{display:"grid",gridTemplateColumns:staff.length>0?"repeat(4,1fr)":"repeat(3,1fr)",gap:12}}>
+              <div className="eh-mobile-1col" style={{display:"grid",gridTemplateColumns:staff.length>0?"repeat(4,1fr)":"repeat(3,1fr)",gap:12}}>
                 {[
                   {l:t({ru:"Основана",tg:"Таъсисёфта"}),v:inst.founded},
                   {l:t({ru:"Учеников",tg:"Хонандагон"}),v:inst.students},
@@ -229,7 +229,7 @@ function InstitutionProfileInner() {
               {/* geo */}
               <div style={{borderRadius:18,border:`1px solid ${C.border}`,background:C.s1,padding:26}}>
                 <h3 style={{fontFamily:FH,fontWeight:800,fontSize:17,color:C.text,marginBottom:16}}>{t({ru:"Расположение",tg:"Ҷойгиршавӣ"})}</h3>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12}}>
+                <div className="eh-mobile-1col" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12}}>
                   {[
                     {l:t("geo.region"),v:t(REGION_LABEL[inst.region])},
                     {l:t("geo.city"),v:t(inst.city)},
@@ -259,7 +259,7 @@ function InstitutionProfileInner() {
                     <PenLine size={13}/> {t({ru:"Оценить учреждение",tg:"Муассисаро баҳо додан"})}
                   </button>
                 </div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0 28px"}}>
+                <div className="eh-mobile-1col" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0 28px"}}>
                   {inst.metrics.map(m=>(
                     <MetricBar key={m.label} label={m.label} value={m.v} t={t}/>
                   ))}
@@ -269,7 +269,7 @@ function InstitutionProfileInner() {
               {/* features */}
               <div style={{borderRadius:18,border:`1px solid ${C.border}`,background:C.s1,padding:26}}>
                 <h3 style={{fontFamily:FH,fontWeight:800,fontSize:17,color:C.text,marginBottom:16}}>{t({ru:"Услуги и возможности",tg:"Хизматрасонӣ ва имконот"})}</h3>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:10}}>
+                <div className="eh-mobile-1col" style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:10}}>
                   {([
                     {key:"transport" as AmenityKey,v:inst.transport},
                     {key:"food" as AmenityKey,v:inst.food},
@@ -366,7 +366,7 @@ function InstitutionProfileInner() {
             {staff.length === 0 ? (
               <p style={{color:C.muted,fontSize:14}}>{t("empty.staff")}</p>
             ) : (
-              <div ref={staffRef} style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:18}}>
+              <div ref={staffRef} className="eh-mobile-1col" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:18}}>
                 {staff.map((p,i)=>(
                   <button key={p.id} onClick={()=>router.push(`/people/${p.id}`)}
                     style={{textAlign:"left",borderRadius:18,overflow:"hidden",border:`1px solid ${C.border}`,background:C.s1,cursor:"pointer",...revealStyle(staffVisible,i*70)}}>
@@ -400,7 +400,7 @@ function InstitutionProfileInner() {
         {tab==="gallery" && (
           <div>
             <h2 style={{fontFamily:FH,fontWeight:800,fontSize:22,color:C.text,marginBottom:24}}>{t({ru:"Фотогалерея",tg:"Галереяи расмҳо"})}</h2>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
+            <div className="eh-mobile-1col" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
               {inst.gallery.map((g,i)=>(
                 <div key={i} onClick={()=>setLightbox(g.url)} style={{aspectRatio:"4/3",borderRadius:12,overflow:"hidden",cursor:"pointer",position:"relative"}}>
                   <img src={g.url} alt={t(g.label)} style={{width:"100%",height:"100%",objectFit:"cover",transition:"transform .3s"}}
@@ -428,7 +428,7 @@ function InstitutionProfileInner() {
               return (
                 <div key={cat.key} style={{marginBottom:32}}>
                   <h3 style={{fontFamily:FH,fontWeight:700,fontSize:17,color:C.teal,marginBottom:14}}>{t(cat.labelKey)}</h3>
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
+                  <div className="eh-mobile-1col" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
                     {items.map(ach=>{
                       const p = new URLSearchParams(searchParams.toString());
                       p.set("achievement", ach.id);
@@ -460,7 +460,7 @@ function InstitutionProfileInner() {
             {!inst.alumni || inst.alumni.length===0 ? (
               <p style={{color:C.muted,fontSize:14}}>{t({ru:"Выпускники не добавлены",tg:"Хатмкунандагон илова нашудаанд"})}</p>
             ) : (
-              <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16}}>
+              <div className="eh-mobile-1col" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16}}>
                 {inst.alumni.map(a=>(
                   <div key={a.id} style={{borderRadius:16,border:`1px solid ${C.border}`,background:C.s1,padding:18,textAlign:"center"}}>
                     <img src={a.photo} alt={t(a.name)} style={{width:64,height:64,borderRadius:"50%",objectFit:"cover",margin:"0 auto 12px"}}/>
@@ -486,7 +486,7 @@ function InstitutionProfileInner() {
                 <p style={{fontSize:13.5}}>{t({ru:"В данном учреждении нет организованного питания",tg:"Дар ин муассиса ғизои муташаккил нест"})}</p>
               </div>
             ) : inst.foodMenu ? (
-              <div style={{display:"grid",gridTemplateColumns:`repeat(${inst.foodMenu.length},1fr)`,gap:14}}>
+              <div className="eh-mobile-1col" style={{display:"grid",gridTemplateColumns:`repeat(${inst.foodMenu.length},1fr)`,gap:14}}>
                 {inst.foodMenu.map(dayMenu=>(
                   <div key={dayMenu.day} style={{borderRadius:16,border:`1px solid ${C.border}`,background:C.s1,overflow:"hidden"}}>
                     <div style={{padding:"10px 14px",background:C.s2,borderBottom:`1px solid ${C.border}`}}>
@@ -504,7 +504,7 @@ function InstitutionProfileInner() {
                 ))}
               </div>
             ) : (
-              <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:14}}>
+              <div className="eh-mobile-1col" style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:14}}>
                 {["menu.mon","menu.tue","menu.wed","menu.thu","menu.fri"].map(dayKey=>(
                   <div key={dayKey} style={{borderRadius:16,border:`1px solid ${C.border}`,background:C.s1,overflow:"hidden"}}>
                     <div style={{padding:"10px 14px",background:C.s2,borderBottom:`1px solid ${C.border}`}}>
@@ -529,7 +529,7 @@ function InstitutionProfileInner() {
         {/* REVIEWS */}
         {tab==="reviews" && (
           <div>
-            <div style={{display:"grid",gridTemplateColumns:"240px 1fr",gap:24,marginBottom:32}}>
+            <div className="eh-mobile-1col" style={{display:"grid",gridTemplateColumns:"240px 1fr",gap:24,marginBottom:32}}>
               <div style={{borderRadius:18,border:`1px solid ${C.border}`,background:C.s1,padding:24,textAlign:"center"}}>
                 <p style={{fontFamily:FH,fontWeight:900,fontSize:52,color:C.text,lineHeight:1}}>{inst.score}</p>
                 <Stars s={inst.score} size={18}/>
@@ -632,7 +632,7 @@ function InstitutionProfileInner() {
         {tab==="news" && (
           <div>
             <h2 style={{fontFamily:FH,fontWeight:800,fontSize:22,color:C.text,marginBottom:24}}>{t("tab.news")}</h2>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:18}}>
+            <div className="eh-mobile-1col" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:18}}>
               {news.map(n=>(
                 <Link key={n.id} href={`/news/${n.id}`} style={{display:"block",borderRadius:18,overflow:"hidden",border:`1px solid ${C.border}`,background:C.s1,textDecoration:"none",cursor:"pointer",transition:"transform .18s,border-color .18s"}}>
                   {n.coverUrl && <div style={{height:160,overflow:"hidden"}}><img src={n.coverUrl} alt={t(n.title)} style={{width:"100%",height:"100%",objectFit:"cover"}}/></div>}
@@ -652,41 +652,31 @@ function InstitutionProfileInner() {
           </div>
         )}
 
-        {/* VACANCIES */}
+        {/* VACANCIES — превью-список, полный текст+отклик на /vacancies/[id] */}
         {tab==="vacancies" && (
-          <div style={{display:"flex",flexDirection:"column",gap:16}}>
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>
             {instVacancies.length===0 ? (
               <div style={{padding:56,borderRadius:16,border:`1px dashed ${C.border}`,textAlign:"center",color:C.muted}}>
                 <Briefcase size={28} style={{color:C.dim,margin:"0 auto 12px"}}/>
                 <p style={{fontFamily:FH,fontWeight:800,fontSize:17,color:C.text}}>{t("empty.vacancies")}</p>
               </div>
             ) : instVacancies.map(v=>(
-              <div key={v.id} id={`vacancy-${v.id}`} style={{borderRadius:18,border:`1px solid ${highlightVacancyId===v.id?C.teal:C.border}`,background:highlightVacancyId===v.id?`${C.teal}0f`:C.s1,padding:26,transition:"background .4s,border-color .4s"}}>
-                <h3 style={{fontFamily:FH,fontWeight:800,fontSize:17,color:C.text,marginBottom:8}}>{t(v.title)}</h3>
-                <div style={{display:"flex",gap:16,flexWrap:"wrap",marginBottom:16}}>
-                  {v.salaryFrom && (
-                    <span style={{display:"flex",alignItems:"center",gap:6,fontSize:13,color:C.text}}>
-                      <Wallet size={14} style={{color:C.teal}}/> {v.salaryFrom}–{v.salaryTo} {t("common.perMonth")}
+              <Link key={v.id} href={`/vacancies/${v.id}`} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:16,borderRadius:16,border:`1px solid ${C.border}`,background:C.s1,padding:"18px 20px",textDecoration:"none"}}>
+                <div style={{minWidth:0}}>
+                  <h3 style={{fontFamily:FH,fontWeight:800,fontSize:15.5,color:C.text,marginBottom:6}}>{t(v.title)}</h3>
+                  <div style={{display:"flex",gap:14,flexWrap:"wrap"}}>
+                    {v.salaryFrom && (
+                      <span style={{display:"flex",alignItems:"center",gap:5,fontSize:12.5,color:C.sub}}>
+                        <Wallet size={12} style={{color:C.teal}}/> {v.salaryFrom}–{v.salaryTo} {t("common.perMonth")}
+                      </span>
+                    )}
+                    <span style={{display:"flex",alignItems:"center",gap:5,fontSize:12.5,color:C.sub}}>
+                      <Clock size={12} style={{color:C.teal}}/> {t(v.employment)}
                     </span>
-                  )}
-                  <span style={{display:"flex",alignItems:"center",gap:6,fontSize:13,color:C.text}}>
-                    <Clock size={14} style={{color:C.teal}}/> {t(v.employment)}
-                  </span>
+                  </div>
                 </div>
-                <p style={{fontSize:14,color:C.sub,lineHeight:1.7,marginBottom:16}}>{t(v.description)}</p>
-                <div style={{display:"flex",flexDirection:"column",gap:7,marginBottom:18}}>
-                  {v.requirements.map((r,i)=>(
-                    <div key={i} style={{display:"flex",alignItems:"flex-start",gap:8,fontSize:13.5,color:C.sub}}>
-                      <CheckCircle size={14} style={{color:C.ok,flexShrink:0,marginTop:2}}/> {t(r)}
-                    </div>
-                  ))}
-                </div>
-                <button
-                  onClick={()=>{ addApplication(v.id); router.push(chatHref(inst.id)); }}
-                  style={{display:"flex",alignItems:"center",gap:8,padding:"10px 20px",borderRadius:10,background:C.teal,color:C.overlay,fontFamily:FH,fontWeight:700,fontSize:13.5,border:"none",cursor:"pointer"}}>
-                  <MessageSquare size={14}/> {hasApplied(v.id) ? t({ru:"Вы откликнулись — открыть чат",tg:"Шумо ҷавоб додаед — чатро кушоед"}) : t({ru:"Откликнуться",tg:"Ҷавоб додан"})}
-                </button>
-              </div>
+                <ChevronRight size={18} style={{color:C.dim,flexShrink:0}}/>
+              </Link>
             ))}
           </div>
         )}

@@ -65,7 +65,7 @@ export default function ApplicantsPage() {
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!responded) addEmployerResponse(a.id, instId, t({ ru: "Мы заинтересованы в вашем профиле — напишите нам в чат.", tg: "Мо ба профили шумо шавқмандем — дар чат ба мо нависед." })); }}
                     disabled={responded}
                     style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, background: responded ? C.s2 : C.teal, color: responded ? C.dim : C.overlay, fontFamily: FH, fontWeight: 700, fontSize: 12.5, border: "none", cursor: responded ? "default" : "pointer", flexShrink: 0 }}>
-                    <Send size={13} /> {responded ? t({ ru: "Вы откликнулись", tg: "Шумо ҷавоб додед" }) : t({ ru: "Откликнуться", tg: "Ҷавоб додан" })}
+                    <Send size={13} /> {responded ? t({ ru: "Приглашение отправлено", tg: "Даъватнома фиристода шуд" }) : t({ ru: "Пригласить к диалогу", tg: "Ба гуфтугӯ даъват кардан" })}
                   </button>
                 )}
                 <ChevronRight size={18} style={{ color: C.dim, flexShrink: 0 }} />

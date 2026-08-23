@@ -45,7 +45,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div style={{ display: "flex", fontFamily: FB, background: C.bg, color: C.text, minHeight: "calc(100vh - 64px)" }}>
+    <div className="eh-sidebar-shell" style={{ display: "flex", fontFamily: FB, background: C.bg, color: C.text, minHeight: "calc(100vh - 64px)" }}>
       <aside style={{ width: 240, flexShrink: 0, borderRight: `1px solid ${C.border}`, padding: "20px 14px" }}>
         <p style={{ padding: "0 10px", fontSize: 11, fontWeight: 700, color: C.dim, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 8 }}>
           {t({ ru: "Администратор платформы", tg: "Маъмури платформа" })}
@@ -64,7 +64,7 @@ export default function AdminPage() {
         {tab === "overview" && (
           <div>
             <h1 style={{ fontFamily: FH, fontWeight: 900, fontSize: 24, marginBottom: 22 }}>{t({ ru: "Обзор платформы", tg: "Хулосаи платформа" })}</h1>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 24 }}>
+            <div className="eh-mobile-1col" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 24 }}>
               {[
                 { l: t({ ru: "Учреждений", tg: "Муассисаҳо" }), v: totalInstitutions, icon: Building2 },
                 { l: t("common.reviews"), v: REVIEWS.length, icon: Star },

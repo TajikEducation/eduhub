@@ -108,7 +108,7 @@ export default function AboutPage() {
 
       {/* ── KEY STATS ── */}
       <div ref={statsRef} style={{ maxWidth: 1100, margin: "0 auto", padding: "0 28px 56px", ...revealStyle(statsVisible) }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14 }}>
+        <div className="eh-mobile-1col" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14 }}>
           {[
             { icon: Users, l: { ru: "DAU (год 1)", tg: "DAU (соли 1)" }, v: "15 000" },
             { icon: Building2, l: { ru: "Активных учреждений", tg: "Муассисаҳои фаъол" }, v: "2 000+" },
@@ -129,7 +129,7 @@ export default function AboutPage() {
         <h2 style={{ fontFamily: FH, fontWeight: 800, fontSize: 20, color: C.text, marginBottom: 18, display: "flex", alignItems: "center", gap: 8 }}>
           <Target size={19} style={{ color: C.teal }} /> {t({ ru: "Размер рынка", tg: "Андозаи бозор" })}
         </h2>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 14 }}>
+        <div className="eh-mobile-1col" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 14 }}>
           {MARKET.map((m) => (
             <div key={m.l.ru} style={{ borderRadius: 18, border: `1px solid ${C.border}`, background: C.s1, padding: 22 }}>
               <p style={{ fontFamily: FH, fontWeight: 700, fontSize: 12.5, color: C.teal, textTransform: "uppercase", letterSpacing: ".04em", marginBottom: 8 }}>{t(m.l)}</p>
@@ -151,7 +151,7 @@ export default function AboutPage() {
             tg: "Рейтингро харидан мумкин нест: тарифи пулакии муассиса танҳо ба намоён будан дар ҷустуҷӯ таъсир мерасонад, аммо ҳеҷ гоҳ — ба арзиши баҳо. Баҳо танҳо аз 8 меъёри мустақил аз шарҳҳои тасдиқшуда ташкил мешавад.",
           })}
         </p>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 14 }}>
+        <div className="eh-mobile-1col" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 14 }}>
           {TRUST_PILLARS.map((p) => (
             <div key={p.title.ru} style={{ borderRadius: 18, border: `1px solid ${C.border}`, background: C.s1, padding: 22 }}>
               <div style={{ width: 40, height: 40, borderRadius: 11, background: `${C.teal}18`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
@@ -169,7 +169,7 @@ export default function AboutPage() {
         <h2 style={{ fontFamily: FH, fontWeight: 800, fontSize: 20, color: C.text, marginBottom: 18 }}>
           {t({ ru: "Трёхсторонняя модель", tg: "Модели сеҷониба" })}
         </h2>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 14 }}>
+        <div className="eh-mobile-1col" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 14 }}>
           {SIDES.map((s) => (
             <div key={s.title.ru} style={{ borderRadius: 18, border: `1px solid ${C.border}`, background: C.s1, padding: 24 }}>
               <div style={{ width: 42, height: 42, borderRadius: 12, background: `${s.color}18`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
@@ -209,7 +209,7 @@ export default function AboutPage() {
         <h3 style={{ fontFamily: FH, fontWeight: 800, fontSize: 16, color: C.text, margin: "32px 0 14px" }}>
           {t({ ru: "Видение на 5 лет", tg: "Дурнамо барои 5 сол" })}
         </h3>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12 }}>
+        <div className="eh-mobile-1col" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12 }}>
           {VISION.map((v) => (
             <div key={v.y.ru} style={{ borderRadius: 12, border: `1px solid ${C.border}`, background: C.s1, padding: 16 }}>
               <p style={{ fontFamily: FH, fontWeight: 800, fontSize: 12.5, color: C.teal, marginBottom: 6 }}>{t(v.y)}</p>

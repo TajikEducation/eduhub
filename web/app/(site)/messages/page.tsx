@@ -2,8 +2,8 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Send } from "lucide-react";
-import { C, FH, FB, CONVS, MESSAGES } from "@/lib/data";
+import { Send, MessagesSquare } from "lucide-react";
+import { C, FH, FB, PHOTOS, CONVS, MESSAGES } from "@/lib/data";
 import { useAppState } from "@/lib/app-state";
 import { useT, useLocale } from "@/lib/i18n";
 
@@ -66,11 +66,25 @@ function MessagesInner() {
   }
 
   return (
-    <div style={{ maxWidth: 1100, margin: "0 auto", padding: "28px 28px 80px", fontFamily: FB }}>
-      <h1 style={{ fontFamily: FH, fontWeight: 900, fontSize: "clamp(22px,3vw,30px)", color: C.text, marginBottom: 20 }}>
-        {t({ ru: "Сообщения", tg: "Паёмҳо" })}
-      </h1>
-      <div style={{ height: "calc(100vh - 260px)", minHeight: 480, display: "flex", borderRadius: 18, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+    <div style={{ fontFamily: FB }}>
+      {/* ── тематический фото-фон над чатом ── */}
+      <div style={{ position: "relative", height: 130, overflow: "hidden" }}>
+        <img src={PHOTOS.classroom2} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+        <div style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg, ${C.overlay}66 0%, ${C.overlay}D8 80%, ${C.overlay} 100%)` }} />
+        <div style={{ position: "relative", height: "100%", display: "flex", alignItems: "flex-end", maxWidth: 1100, margin: "0 auto", padding: "0 28px 18px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: `${C.teal}30`, border: `1px solid ${C.teal}66`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <MessagesSquare size={16} style={{ color: C.teal }} />
+            </div>
+            <h1 style={{ fontFamily: FH, fontWeight: 900, fontSize: "clamp(20px,2.6vw,26px)", color: "#fff", letterSpacing: "-.02em" }}>
+              {t({ ru: "Сообщения", tg: "Паёмҳо" })}
+            </h1>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "20px 28px 80px" }}>
+      <div style={{ height: "calc(100vh - 340px)", minHeight: 440, display: "flex", borderRadius: 18, border: `1px solid ${C.border}`, overflow: "hidden" }}>
       {/* ── conversation list ── */}
       <div style={{ width: 220, borderRight: `1px solid ${C.border}`, overflowY: "auto", flexShrink: 0, background: C.s1 }}>
         {CONVS.map((c) => (
@@ -135,6 +149,7 @@ function MessagesInner() {
             <Send size={18} color={C.overlay} />
           </button>
         </div>
+      </div>
       </div>
       </div>
     </div>

@@ -254,7 +254,7 @@ export default function DashboardPage() {
   if (myInstitution?.status === "rejected") return <RejectedScreen router={router} t={t} />;
 
   return (
-    <div style={{ display: "flex", fontFamily: FB, background: C.bg, color: C.text }}>
+    <div className="eh-sidebar-shell" style={{ display: "flex", fontFamily: FB, background: C.bg, color: C.text }}>
       {/* ── SIDEBAR ── */}
       <aside style={{ width: 240, flexShrink: 0, borderRight: `1px solid ${C.border}`, padding: "20px 14px", display: "flex", flexDirection: "column" }}>
         <p style={{ padding: "0 10px", fontSize: 11, fontWeight: 700, color: C.dim, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 8 }}>{t({ru:"Кабинет учреждения",tg:"Кабинети муассиса"})}</p>
@@ -285,7 +285,7 @@ export default function DashboardPage() {
         {tab === "overview" && (
           <div>
             <h1 style={{ fontFamily: FH, fontWeight: 900, fontSize: 24, marginBottom: 22 }}>{t("dash.overview")}</h1>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 28 }}>
+            <div className="eh-mobile-1col" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 28 }}>
               {[
                 { l: t({ru:"Рейтинг",tg:"Рейтинг"}), v: inst0.score, sub: `${inst0.rev} ${t("common.reviews")}` },
                 { l: t({ru:"Учеников",tg:"Хонандагон"}), v: inst0.students, sub: `${t({ru:"с",tg:"аз"})} ${inst0.founded}` },

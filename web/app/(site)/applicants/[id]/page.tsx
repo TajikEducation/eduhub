@@ -40,7 +40,7 @@ export default function ApplicantProfilePage() {
         <ArrowLeft size={15} /> {t("common.back")}
       </button>
 
-      <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 24, alignItems: "start" }}>
+      <div className="eh-mobile-1col" style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 24, alignItems: "start" }}>
         {/* LEFT CARD */}
         <div style={{ borderRadius: 18, overflow: "hidden", border: `1px solid ${C.border}`, background: C.s1 }}>
           <div style={{ height: 280, overflow: "hidden", position: "relative" }}>
@@ -78,7 +78,7 @@ export default function ApplicantProfilePage() {
                 onClick={() => { if (!responded) addEmployerResponse(found.id, instId, t({ ru: "Мы заинтересованы в вашем профиле — напишите нам в чат.", tg: "Мо ба профили шумо шавқмандем — дар чат ба мо нависед." })); }}
                 disabled={responded}
                 style={{ width: "100%", padding: "10px", borderRadius: 12, background: responded ? C.s2 : `${C.teal}18`, border: `1px solid ${responded ? C.border : C.teal + "44"}`, color: responded ? C.dim : C.teal, fontFamily: FH, fontWeight: 700, fontSize: 13.5, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, cursor: responded ? "default" : "pointer" }}>
-                <Send size={14} /> {responded ? t({ ru: "Вы откликнулись", tg: "Шумо ҷавоб додед" }) : t({ ru: "Откликнуться", tg: "Ҷавоб додан" })}
+                <Send size={14} /> {responded ? t({ ru: "Приглашение отправлено", tg: "Даъватнома фиристода шуд" }) : t({ ru: "Пригласить к диалогу", tg: "Ба гуфтугӯ даъват кардан" })}
               </button>
             )}
           </div>

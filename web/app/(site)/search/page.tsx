@@ -149,7 +149,7 @@ function SearchPageInner() {
         </span>
       </div>
 
-      <div style={{display:"grid",gridTemplateColumns:showFilters?"250px 1fr":"1fr",gap:22,alignItems:"start"}}>
+      <div className="eh-mobile-1col" style={{display:"grid",gridTemplateColumns:showFilters?"250px 1fr":"1fr",gap:22,alignItems:"start"}}>
         {showFilters && (
           <aside style={{borderRadius:16,border:`1px solid ${C.border}`,background:C.s1,position:"sticky",top:80,alignSelf:"start",overflow:"hidden"}}>
             <div style={{padding:"16px 18px",borderBottom:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -159,7 +159,7 @@ function SearchPageInner() {
 
             <div style={{padding:"16px 18px",maxHeight:"calc(100vh - 200px)",overflowY:"auto"}}>
               <SectionLabel l={t({ru:"Тип учреждения",tg:"Навъи муассиса"})}/>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+              <div className="eh-mobile-1col" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                 {CATEGORY_KEYS.map(k=>(
                   <Chip key={k} l={t(CATEGORY_META[k].label)} on={typeF===k} click={()=>setTypeF(typeF===k?null:k)}/>
                 ))}
@@ -244,7 +244,7 @@ function SearchPageInner() {
               {activeCount>0 && <button onClick={clearAll} style={{marginTop:12,padding:"9px 20px",borderRadius:10,background:C.teal,color:C.overlay,fontFamily:FH,fontWeight:700,fontSize:13.5,border:"none",cursor:"pointer"}}>{t({ru:"Сбросить фильтры",tg:"Филтрҳоро тоза кардан"})}</button>}
             </div>
           ) : (
-            <div ref={resultsRef} style={{display:"grid",gridTemplateColumns:showFilters?"1fr 1fr":"repeat(3,1fr)",gap:18}}>
+            <div ref={resultsRef} className="eh-mobile-1col" style={{display:"grid",gridTemplateColumns:showFilters?"1fr 1fr":"repeat(3,1fr)",gap:18}}>
               {results.map((inst,i)=>(
                 <div key={inst.id} style={revealStyle(resultsVisible,Math.min(i,8)*45)}>
                   <InstitCard inst={inst} onClick={()=>router.push(`/institutions/${inst.id}`)}/>

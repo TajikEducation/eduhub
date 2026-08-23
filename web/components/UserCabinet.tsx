@@ -375,7 +375,7 @@ export function UserCabinet() {
           </div>
 
           {applicantSubTab === "profile" && (
-            <div style={{ display: "grid", gridTemplateColumns: "260px 1fr", gap: 24, alignItems: "start" }}>
+            <div className="eh-mobile-1col" style={{ display: "grid", gridTemplateColumns: "260px 1fr", gap: 24, alignItems: "start" }}>
               <div style={{ borderRadius: 18, border: `1px solid ${C.border}`, background: C.s1, padding: 18 }}>
                 <div onClick={() => photoInputRef.current?.click()} style={{ position: "relative", width: "100%", aspectRatio: "1", borderRadius: 14, marginBottom: 16, cursor: "pointer", overflow: "hidden" }}>
                   <img src={applicant.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -493,7 +493,7 @@ export function UserCabinet() {
                       const vacancy = VACANCIES.find((v) => v.id === a.vacancyId);
                       const inst = vacancy ? INSTITUTIONS.find((i) => i.id === vacancy.instId) : null;
                       return (
-                        <button key={a.id} onClick={() => vacancy && inst && router.push(`/institutions/${inst.id}?tab=vacancies&vacancy=${vacancy.id}`)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", textAlign: "left", borderRadius: 14, border: `1px solid ${C.border}`, background: C.s1, padding: "14px 18px", cursor: vacancy && inst ? "pointer" : "default", font: "inherit" }}>
+                        <button key={a.id} onClick={() => vacancy && router.push(`/vacancies/${vacancy.id}`)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", textAlign: "left", borderRadius: 14, border: `1px solid ${C.border}`, background: C.s1, padding: "14px 18px", cursor: vacancy ? "pointer" : "default", font: "inherit" }}>
                           <div>
                             <p style={{ fontFamily: FH, fontWeight: 700, fontSize: 14, color: C.text }}>{vacancy ? vacancy.title[locale] : a.vacancyId}</p>
                             <p style={{ fontSize: 12.5, color: C.sub, marginTop: 2 }}>{inst ? inst.name[locale] : ""} · {a.createdAt}</p>
@@ -552,7 +552,7 @@ export function UserCabinet() {
             <FormField label={`${t({ ru: "Описание", tg: "Тавсиф" })} (${locale.toUpperCase()})`}>
               <textarea value={achievementForm.desc[locale]} onChange={(e) => setAchievementForm({ ...achievementForm, desc: { ...achievementForm.desc, [locale]: e.target.value } })} style={{ ...inputStyle, height: 80, resize: "none" as const }} />
             </FormField>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div className="eh-mobile-1col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <FormField label={t({ ru: "Год", tg: "Сол" })}>
                 <input type="number" value={achievementForm.year} onChange={(e) => setAchievementForm({ ...achievementForm, year: Number(e.target.value) })} style={inputStyle} />
               </FormField>

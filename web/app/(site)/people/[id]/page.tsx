@@ -28,7 +28,7 @@ export default function PersonProfilePage() {
         <ArrowLeft size={15}/> {t({ru:"Назад к профилю",tg:"Бозгашт ба профил"})}
       </button>
 
-      <div style={{display:"grid",gridTemplateColumns:"300px 1fr",gap:24,alignItems:"start"}}>
+      <div className="eh-mobile-1col" style={{display:"grid",gridTemplateColumns:"300px 1fr",gap:24,alignItems:"start"}}>
         {/* ── LEFT CARD ── */}
         <div style={{borderRadius:18,overflow:"hidden",border:`1px solid ${C.border}`,background:C.s1}}>
           <div style={{height:280,overflow:"hidden",position:"relative"}}>

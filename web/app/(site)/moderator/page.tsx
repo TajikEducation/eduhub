@@ -41,7 +41,7 @@ export default function ModeratorPage() {
             </span>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 18 }}>
+          <div className="eh-mobile-1col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 18 }}>
             {[
               { l: t({ ru: "Адрес", tg: "Суроға" }), v: pending.address.ru },
               { l: t({ ru: "Телефон", tg: "Телефон" }), v: pending.phone },

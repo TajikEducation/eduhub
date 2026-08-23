@@ -237,12 +237,14 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       website: input.website,
       geo: REGION_CENTROIDS[input.region],
     };
+    // роль "institution" выдаётся только после одобрения модератором (см. setInstitutionStatus) —
+    // до этого заявка просто числится за текущим пользователем (role остаётся как есть)
     setMyInstitution(newInst);
-    setRole("institution");
   }, []);
 
   const setInstitutionStatus = useCallback((status: Institution["status"]) => {
     setMyInstitution((prev) => (prev ? { ...prev, status } : prev));
+    if (status === "approved") setRole("institution");
   }, []);
 
   const setPlatformSettings = useCallback((patch: Partial<PlatformSettings>) => {

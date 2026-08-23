@@ -17,7 +17,7 @@ export function Footer() {
 
   return (
     <footer style={{ borderTop: `1px solid ${C.border}`, marginTop: 40 }}>
-      <div style={{ maxWidth: 1260, margin: "0 auto", padding: "40px 28px", display: "grid", gridTemplateColumns: "1.4fr 1fr 1fr", gap: 24 }}>
+      <div className="eh-mobile-1col" style={{ maxWidth: 1260, margin: "0 auto", padding: "40px 28px", display: "grid", gridTemplateColumns: "1.4fr 1fr 1fr", gap: 24 }}>
         <div>
           <span style={{ fontFamily: FH, fontWeight: 900, fontSize: 18, color: C.text }}>
             Edu<span style={{ color: C.gold }}>Hub</span>
@@ -28,7 +28,7 @@ export function Footer() {
           <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
             {EDUHUB_SOCIALS.map(s => (
               <a key={s.abbr} href={s.url} target="_blank" rel="noopener noreferrer" aria-label={s.abbr}
-                style={{ width: 32, height: 32, borderRadius: 8, background: `${s.color}18`, border: `1px solid ${s.color}44`, display: "flex", alignItems: "center", justifyContent: "center", color: s.color, fontFamily: FH, fontWeight: 800, fontSize: 10, textDecoration: "none" }}>
+                style={{ width: 32, height: 32, borderRadius: 8, background: `${s.color}18`, border: `1px solid ${s.color}44`, display: "flex", alignItems: "center", justifyContent: "center", color: s.color, fontFamily: FH, fontWeight: 800, fontSize: 11, textDecoration: "none" }}>
                 {s.abbr}
               </a>
             ))}

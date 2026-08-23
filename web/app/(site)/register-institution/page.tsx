@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Building2 } from "lucide-react";
 import { C, FH, FB, CATEGORY_META, REGION_ORDER, REGION_LABEL, type CategoryKey, type Region } from "@/lib/data";
+import Link from "next/link";
 import { useAppState, type RegisterInstitutionInput } from "@/lib/app-state";
 import { useT } from "@/lib/i18n";
 
@@ -32,8 +33,27 @@ const EMPTY: RegisterInstitutionInput = {
 export default function RegisterInstitutionPage() {
   const t = useT();
   const router = useRouter();
-  const { registerInstitution } = useAppState();
+  const { role, registerInstitution } = useAppState();
   const [form, setForm] = useState<RegisterInstitutionInput>(EMPTY);
+
+  // заявку на регистрацию учреждения может подать только вошедший пользователь —
+  // без аккаунта не с кем связать owner_user_id при переносе на бэкенд
+  if (role === "guest") {
+    return (
+      <div style={{ maxWidth: 480, margin: "0 auto", padding: "80px 28px", textAlign: "center" }}>
+        <Building2 size={28} style={{ color: C.teal, margin: "0 auto 14px" }} />
+        <h1 style={{ fontFamily: FH, fontWeight: 800, fontSize: 19, color: C.text, marginBottom: 10 }}>
+          {t({ ru: "Сначала войдите в аккаунт", tg: "Аввал ба ҳисоб ворид шавед" })}
+        </h1>
+        <p style={{ fontSize: 13.5, color: C.sub, marginBottom: 22, lineHeight: 1.6 }}>
+          {t({ ru: "Заявку на регистрацию учреждения подаёт представитель — от имени своего аккаунта.", tg: "Дархостро барои сабти муассиса намояндаи он — аз номи ҳисоби худ пешниҳод мекунад." })}
+        </p>
+        <Link href="/login?next=/register-institution" style={{ display: "inline-flex", padding: "12px 26px", borderRadius: 11, background: C.teal, color: C.overlay, fontFamily: FH, fontWeight: 800, fontSize: 14, textDecoration: "none" }}>
+          {t({ ru: "Войти", tg: "Ворид шудан" })}
+        </Link>
+      </div>
+    );
+  }
 
   function set<K extends keyof RegisterInstitutionInput>(key: K, value: RegisterInstitutionInput[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -65,7 +85,7 @@ export default function RegisterInstitutionPage() {
           <input required value={form.name} onChange={(e) => set("name", e.target.value)} style={inputStyle} />
         </FormField>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+        <div className="eh-mobile-1col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
           <FormField label={t({ ru: "Тип", tg: "Навъ" })}>
             <select value={form.tk} onChange={(e) => set("tk", e.target.value as CategoryKey)} style={inputStyle}>
               {CATEGORY_KEYS.map((k) => (<option key={k} value={k}>{t(CATEGORY_META[k].label)}</option>))}
@@ -78,7 +98,7 @@ export default function RegisterInstitutionPage() {
           </FormField>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+        <div className="eh-mobile-1col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
           <FormField label={t({ ru: "Город", tg: "Шаҳр" })}>
             <input required value={form.city} onChange={(e) => set("city", e.target.value)} style={inputStyle} />
           </FormField>
@@ -91,7 +111,7 @@ export default function RegisterInstitutionPage() {
           <input required value={form.street} onChange={(e) => set("street", e.target.value)} style={inputStyle} />
         </FormField>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
+        <div className="eh-mobile-1col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
           <FormField label={t({ ru: "Цена, сомони/мес", tg: "Нарх, сомонӣ/моҳ" })}>
             <input type="number" min={0} value={form.price} onChange={(e) => set("price", Number(e.target.value))} style={inputStyle} />
           </FormField>
@@ -107,7 +127,7 @@ export default function RegisterInstitutionPage() {
           <input value={form.age} onChange={(e) => set("age", e.target.value)} style={inputStyle} />
         </FormField>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+        <div className="eh-mobile-1col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
           <FormField label={t({ ru: "Телефон", tg: "Телефон" })}>
             <input required value={form.phone} onChange={(e) => set("phone", e.target.value)} style={inputStyle} />
           </FormField>

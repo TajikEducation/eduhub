@@ -3,8 +3,8 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, ArrowRight, ChevronRight, ShieldCheck, SlidersHorizontal, Star, MessageCircle, Send, Users, Building2, Briefcase, LocateFixed, UtensilsCrossed, Bus, GraduationCap, Trophy } from "lucide-react";
-import { C, FH, FB, INSTITUTIONS, ALL_STAFF, PHOTOS, CATEGORY_META, REGION_LABEL, type CategoryKey } from "@/lib/data";
+import { Search, ArrowRight, ChevronRight, ShieldCheck, SlidersHorizontal, Star, MessageCircle, Send, Users, Building2, Briefcase, LocateFixed } from "lucide-react";
+import { C, FH, FB, PHOTOS, CATEGORY_META, REGION_LABEL, type CategoryKey } from "@/lib/data";
 import { InstitCard } from "@/components/InstitCard";
 import { useReveal, revealStyle } from "@/lib/useReveal";
 import { useAppState, useVisibleInstitutions } from "@/lib/app-state";
@@ -12,54 +12,6 @@ import { useT } from "@/lib/i18n";
 import { detectCoords, haversine } from "@/lib/geo";
 
 const CATEGORY_KEYS: CategoryKey[] = ["cat_kg", "cat_school", "cat_center", "cat_uni"];
-
-// Витрина реальных данных вместо вымышленных агрегатов платформы (STATS) —
-// каждая карточка вычисляется из реальных сидов, ничего не выдумывается.
-const foodInst = INSTITUTIONS.find(i => i.foodMenu && i.foodMenu.length > 0);
-const foodDay = foodInst?.foodMenu?.[0];
-const foodMeal = foodDay?.meals?.[0];
-const transportInst = INSTITUTIONS.find(i => i.transportInfo);
-const teacherHighlight = ALL_STAFF.find(p => p.achievements.length > 0);
-let alumnusHighlight: { instId: number; name: { ru: string; tg: string }; now: { ru: string; tg: string } } | null = null;
-for (const inst of INSTITUTIONS) {
-  const a = inst.alumni?.[0];
-  if (a) { alumnusHighlight = { instId: inst.id, name: a.name, now: a.now }; break; }
-}
-
-const REAL_DATA_CARDS = [
-  {
-    icon: UtensilsCrossed,
-    title: {ru:"Реальное меню, не общие слова", tg:"Менюи воқеӣ, на суханони умумӣ"},
-    text: foodMeal
-      ? {ru:`${foodDay!.day}: ${foodMeal.name}, ${foodMeal.cal}`, tg:`${foodDay!.day}: ${foodMeal.name}, ${foodMeal.cal}`}
-      : {ru:"Меню по дням, калории и аллергены — прямо в профиле учреждения", tg:"Меню аз рӯи рӯзҳо, калорияҳо ва аллергенҳо — дар профили муассиса"},
-    cta: {ru:"Учреждения с питанием", tg:"Муассисаҳо бо ғизо"}, href:"/search?food=1",
-  },
-  {
-    icon: Bus,
-    title: {ru:"Как доедет ребёнок", tg:"Фарзандатон чӣ гуна меравад"},
-    text: transportInst?.transportInfo
-      ? {ru:`${transportInst.transportInfo.types[0].ru}, от ${transportInst.transportInfo.cost} сомони/мес`, tg:`${transportInst.transportInfo.types[0].tg}, аз ${transportInst.transportInfo.cost} сомонӣ/моҳ`}
-      : {ru:"Тип транспорта, районы и стоимость — без звонков в приёмную", tg:"Навъи нақлиёт, ноҳияҳо ва арзиш — бе занг ба қабулгоҳ"},
-    cta: {ru:"Учреждения с развозкой", tg:"Муассисаҳо бо расонидан"}, href:"/search?transport=1",
-  },
-  {
-    icon: GraduationCap,
-    title: {ru:"Педагоги — не аноним", tg:"Омӯзгорон — на бином"},
-    text: teacherHighlight
-      ? {ru:`${teacherHighlight.name.ru} — ${teacherHighlight.achievements[0].title.ru}`, tg:`${teacherHighlight.name.tg} — ${teacherHighlight.achievements[0].title.tg}`}
-      : {ru:"Образование, стаж и награды каждого педагога — открыто", tg:"Таҳсилот, таҷриба ва мукофотҳои ҳар омӯзгор — кушода"},
-    cta: {ru:"Профиль педагога", tg:"Профили омӯзгор"}, href: teacherHighlight ? `/people/${teacherHighlight.id}` : "/search",
-  },
-  {
-    icon: Trophy,
-    title: {ru:"Где выпускники сейчас", tg:"Хатмкунандагон ҳоло дар куҷоянд"},
-    text: alumnusHighlight
-      ? {ru:`${alumnusHighlight.name.ru} — ${alumnusHighlight.now.ru}`, tg:`${alumnusHighlight.name.tg} — ${alumnusHighlight.now.tg}`}
-      : {ru:"Реальные истории выпускников — не абстрактный «рейтинг вуза»", tg:"Ҳикояҳои воқеии хатмкунандагон"},
-    cta: {ru:"Истории выпускников", tg:"Ҳикояҳои хатмкунандагон"}, href: alumnusHighlight ? `/institutions/${alumnusHighlight.instId}?tab=alumni` : "/search",
-  },
-];
 
 export default function HomePage() {
   const router = useRouter();
@@ -93,7 +45,6 @@ export default function HomePage() {
     return [...pool].sort((a,b)=>b.score-a.score).slice(0,4);
   }, [region, myCoords, institutions]);
 
-  const { ref: statsRef, visible: statsVisible } = useReveal<HTMLDivElement>();
   const { ref: missionRef, visible: missionVisible } = useReveal<HTMLDivElement>();
   const { ref: catRef, visible: catVisible } = useReveal<HTMLDivElement>();
   const { ref: topRef, visible: topVisible } = useReveal<HTMLDivElement>();
@@ -146,33 +97,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── REAL DATA (замена вымышленных агрегатов реальными данными из профилей) ── */}
-      <section ref={statsRef} style={{borderTop:`1px solid ${C.border}`,borderBottom:`1px solid ${C.border}`,padding:"48px 28px"}}>
-        <div style={{maxWidth:1260,margin:"0 auto"}}>
-          <h2 style={{fontFamily:FH,fontWeight:900,fontSize:"clamp(20px,2.6vw,26px)",color:C.text,textAlign:"center",letterSpacing:"-.02em",marginBottom:6}}>
-            {t({ru:"Настоящие данные — не рекламные обещания", tg:"Маълумоти воқеӣ — на ваъдаи рекламавӣ"})}
-          </h2>
-          <p style={{fontSize:13.5,color:C.sub,textAlign:"center",marginBottom:28}}>{t({ru:"Прямо из профилей учреждений на платформе", tg:"Мустақим аз профилҳои муассисаҳо дар платформа"})}</p>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14}}>
-            {REAL_DATA_CARDS.map((c,i)=>{
-              const Icon = c.icon;
-              return (
-                <Link key={c.title.ru} href={c.href} style={{display:"block",borderRadius:18,border:`1px solid ${C.border}`,background:C.s1,padding:20,textDecoration:"none",...revealStyle(statsVisible,i*60)}}>
-                  <div style={{width:38,height:38,borderRadius:10,background:`${C.teal}16`,border:`1px solid ${C.teal}33`,display:"flex",alignItems:"center",justifyContent:"center",marginBottom:12}}>
-                    <Icon size={17} style={{color:C.teal}}/>
-                  </div>
-                  <p style={{fontFamily:FH,fontWeight:800,fontSize:14,color:C.text,marginBottom:6}}>{t(c.title)}</p>
-                  <p style={{fontSize:12.5,color:C.sub,lineHeight:1.55,marginBottom:12}}>{t(c.text)}</p>
-                  <span style={{display:"inline-flex",alignItems:"center",gap:5,fontFamily:FH,fontWeight:700,fontSize:12,color:C.teal}}>
-                    {t(c.cta)} <ArrowRight size={12}/>
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
       {/* ── MISSION ── */}
       <section ref={missionRef} style={{maxWidth:1260,margin:"0 auto",padding:"64px 28px 0",...revealStyle(missionVisible)}}>
         <div style={{marginBottom:24}}>
@@ -183,7 +107,7 @@ export default function HomePage() {
             {t({ru:"Пошаговые инструкции: как пользоваться EduHub родителям, соискателям и учреждениям",tg:"Дастурҳои қадам ба қадам: чӣ гуна аз EduHub истифода баранд волидайн, ҷуяндагони кор ва муассисаҳо"})}
           </p>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:18}}>
+        <div className="eh-mobile-1col" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:18}}>
           {[
             {
               photo: PHOTOS.heroGuideP, icon: Users,
@@ -229,13 +153,13 @@ export default function HomePage() {
 
       {/* ── CATEGORIES ── */}
       <section style={{maxWidth:1260,margin:"0 auto",padding:"64px 28px 0"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:28}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",flexWrap:"wrap",gap:12,marginBottom:28}}>
           <div>
             <h2 style={{fontFamily:FH,fontWeight:900,fontSize:"clamp(22px,3vw,32px)",color:C.text,letterSpacing:"-.02em"}}>{t("nav.categories")}</h2>
             <p style={{fontSize:14,color:C.sub,marginTop:4}}>{t({ru:"Выберите тип учреждения", tg:"Навъи муассисаро интихоб кунед"})}</p>
           </div>
         </div>
-        <div ref={catRef} style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16}}>
+        <div ref={catRef} className="eh-mobile-1col" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16}}>
           {CATEGORY_KEYS.map((k,i)=>{
             const meta = CATEGORY_META[k];
             const Icon = meta.icon;
@@ -266,7 +190,7 @@ export default function HomePage() {
 
       {/* ── NEARBY / TOP RATED ── */}
       <section style={{maxWidth:1260,margin:"0 auto",padding:"56px 28px 0"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:28}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",flexWrap:"wrap",gap:12,marginBottom:28}}>
           <div>
             <h2 style={{fontFamily:FH,fontWeight:900,fontSize:"clamp(22px,3vw,32px)",color:C.text,letterSpacing:"-.02em"}}>
               {myCoords ? t({ru:"Учреждения рядом с вами", tg:"Муассисаҳо дар наздикии шумо"})
@@ -279,7 +203,7 @@ export default function HomePage() {
                 : t({ru:"По оценкам родителей Таджикистана", tg:"Аз рӯи бақои волидайни Тоҷикистон"})}
             </p>
           </div>
-          <div style={{display:"flex",gap:8,alignItems:"center"}}>
+          <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
             {!myCoords && (
               <button onClick={locateMe} disabled={locating} style={{display:"flex",alignItems:"center",gap:6,fontFamily:FH,fontWeight:700,fontSize:13.5,color:C.sub,padding:"8px 14px",borderRadius:9,border:`1px solid ${C.border}`,background:"transparent",cursor:locating?"default":"pointer"}}>
                 <LocateFixed size={14}/> {locating ? t("nav.gpsLocating") : t({ru:"Точнее по GPS", tg:"Аниқтар аз рӯи GPS"})}
@@ -290,7 +214,7 @@ export default function HomePage() {
             </Link>
           </div>
         </div>
-        <div ref={topRef} style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:18}}>
+        <div ref={topRef} className="eh-mobile-1col" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:18}}>
           {nearby.map((inst,i)=>(
             <div key={inst.id} style={revealStyle(topVisible,i*70)}>
               <InstitCard inst={inst} onClick={()=>router.push(`/institutions/${inst.id}`)}/>
@@ -303,7 +227,7 @@ export default function HomePage() {
       <section ref={howRef} style={{maxWidth:1260,margin:"0 auto",padding:"56px 28px 80px"}}>
         <h2 style={{fontFamily:FH,fontWeight:900,fontSize:"clamp(22px,3vw,32px)",color:C.text,textAlign:"center",letterSpacing:"-.02em",marginBottom:8}}>{t({ru:"Как это работает", tg:"Ин чӣ гуна кор мекунад"})}</h2>
         <p style={{fontSize:14,color:C.sub,textAlign:"center",marginBottom:44}}>{t({ru:"Четыре шага до осознанного выбора", tg:"Чор қадам то интихоби огоҳона"})}</p>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16}}>
+        <div className="eh-mobile-1col" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16}}>
           {[
             {photo:PHOTOS.student,icon:SlidersHorizontal,t:{ru:"Ищите",tg:"Ҷустуҷӯ кунед"},d:{ru:"Фильтруйте по району, типу, цене, наличию развозки и питания", tg:"Аз рӯи ноҳия, навъ, нарх, мавҷудияти расонидан ва ғизо филтр кунед"}},
             {photo:PHOTOS.classroom2,icon:Star,t:{ru:"Изучайте рейтинг",tg:"Рейтингро омӯзед"},d:{ru:"Честная оценка по 8 параметрам — от качества обучения до безопасности", tg:"Бақои ростқавлона аз рӯи 8 меъёр — аз сифати таълим то бехатарӣ"}},

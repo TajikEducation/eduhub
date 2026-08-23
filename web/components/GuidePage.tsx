@@ -81,7 +81,7 @@ export function GuidePage({
             const Icon = s.icon;
             const reverse = i % 2 === 1;
             return (
-              <div key={i} style={{ display: "grid", gridTemplateColumns: s.screenshot ? "1fr 1fr" : "1fr", gap: 40, alignItems: "center" }}>
+              <div key={i} className="eh-mobile-1col" style={{ display: "grid", gridTemplateColumns: s.screenshot ? "1fr 1fr" : "1fr", gap: 40, alignItems: "center" }}>
                 <div style={{ order: s.screenshot && reverse ? 2 : 1 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
                     <div style={{ width: 36, height: 36, borderRadius: 10, background: `${accent}18`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ChevronDown, LocateFixed, LogOut, MapPin } from "lucide-react";
+import { ChevronDown, LocateFixed, LogOut, MapPin, Menu, X } from "lucide-react";
 import { C, FH, FB, REGION_LABEL, REGION_ORDER } from "@/lib/data";
 import { useAppState, type Role } from "@/lib/app-state";
 import { useT } from "@/lib/i18n";
@@ -67,6 +67,12 @@ export function NavBar() {
   const t = useT();
   const { ref: roleMenuRef, open: roleMenuOpen, setOpen: setRoleMenuOpen } = useOutsideClose<HTMLDivElement>();
   const [gpsBusy, setGpsBusy] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [prevPathname, setPrevPathname] = useState(pathname);
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname);
+    setMobileOpen(false);
+  }
 
   const currentRoleLabel = ROLE_OPTIONS.find((r) => r.value === role);
   const cabinetHref = currentRoleLabel?.href;
@@ -93,6 +99,13 @@ export function NavBar() {
 
   return (
     <header style={{position:"sticky",top:0,zIndex:50,background:`${C.bg}EB`,backdropFilter:"blur(20px)",borderBottom:`1px solid ${C.border}`}}>
+      <style jsx>{`
+        .eh-nav-burger { display: none; }
+        @media (max-width: 880px) {
+          .eh-nav-links, .eh-nav-right-desktop { display: none !important; }
+          .eh-nav-burger { display: flex !important; }
+        }
+      `}</style>
       <div style={{maxWidth:1320,margin:"0 auto",padding:"0 18px",display:"flex",alignItems:"center",gap:4,height:64}}>
         <Link href="/" style={{display:"flex",alignItems:"center",gap:9,flexShrink:0,marginRight:6}}>
           <svg width="32" height="32" viewBox="0 0 40 40" fill="none">
@@ -105,7 +118,7 @@ export function NavBar() {
           </span>
         </Link>
 
-        <nav style={{display:"flex",gap:2,alignItems:"center"}}>
+        <nav className="eh-nav-links" style={{display:"flex",gap:2,alignItems:"center"}}>
           <Link href="/" style={{padding:"7px 10px",borderRadius:8,fontSize:13.5,fontWeight:600,fontFamily:FH,color:pathname==="/"?C.text:C.muted,background:pathname==="/"?C.s3:"transparent",whiteSpace:"nowrap"}}>
             {t("nav.home")}
           </Link>
@@ -129,7 +142,7 @@ export function NavBar() {
           </Link>
         </nav>
 
-        <div style={{marginLeft:"auto",display:"flex",gap:6,alignItems:"center"}}>
+        <div className="eh-nav-right-desktop" style={{marginLeft:"auto",display:"flex",gap:6,alignItems:"center"}}>
           <Dropdown label={region ? t(REGION_LABEL[region]) : t("nav.allRegions")} width={220}>
             <button onClick={useGPS} disabled={gpsBusy} style={{display:"flex",alignItems:"center",gap:8,width:"100%",padding:"11px 14px",background:"transparent",border:"none",borderBottom:`1px solid ${C.border}`,color:C.teal,fontFamily:FH,fontWeight:700,fontSize:13,cursor:gpsBusy?"default":"pointer",textAlign:"left"}}>
               <LocateFixed size={13}/> {gpsBusy?t("nav.gpsLocating"):t("nav.gps")}
@@ -160,10 +173,10 @@ export function NavBar() {
 
           <div ref={roleMenuRef} style={{position:"relative"}}>
             <button
-              onClick={()=>setRoleMenuOpen(o=>!o)}
+              onClick={()=> role==="guest" ? router.push("/login") : setRoleMenuOpen(o=>!o)}
               style={{display:"flex",alignItems:"center",gap:6,padding:"8px 14px",borderRadius:8,fontFamily:FH,fontWeight:700,fontSize:13,background:role==="guest"?C.teal:C.s3,color:role==="guest"?C.bg:C.text,border:role==="guest"?"none":`1px solid ${C.border}`,cursor:"pointer"}}
             >
-              {role==="guest" ? t("nav.login") : t(currentRoleLabel?.key ?? "nav.login")} <ChevronDown size={13}/>
+              {role==="guest" ? t("nav.login") : t(currentRoleLabel?.key ?? "nav.login")} {role!=="guest" && <ChevronDown size={13}/>}
             </button>
             {roleMenuOpen && (
               <div style={{position:"absolute",top:"calc(100% + 10px)",right:0,width:230,background:C.s2,border:`1px solid ${C.border}`,borderRadius:12,boxShadow:"0 20px 50px rgba(0,0,0,0.45)",zIndex:120,overflow:"hidden",animation:"eh-pop .16s ease-out"}}>
@@ -183,7 +196,79 @@ export function NavBar() {
             )}
           </div>
         </div>
+
+        {/* мобильный компактный кластер — видим только <880px, дублирует иконки/кнопку из eh-nav-right-desktop */}
+        <div className="eh-nav-right-mobile" style={{display:"none",marginLeft:"auto",alignItems:"center",gap:6}}>
+          <MessagesLink/>
+          <NotificationBell/>
+          <button onClick={()=>setMobileOpen(o=>!o)} aria-label={t("nav.menu")} className="eh-nav-burger"
+            style={{width:36,height:36,borderRadius:8,background:C.s3,border:`1px solid ${C.border}`,color:C.text,alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+            {mobileOpen ? <X size={17}/> : <Menu size={17}/>}
+          </button>
+        </div>
       </div>
+
+      {mobileOpen && (
+        <div style={{borderTop:`1px solid ${C.border}`,background:C.bg,padding:"14px 18px 20px",display:"flex",flexDirection:"column",gap:4,maxHeight:"calc(100vh - 64px)",overflowY:"auto"}}>
+          <Link href="/" onClick={()=>setMobileOpen(false)} style={{padding:"11px 12px",borderRadius:9,fontSize:14.5,fontWeight:600,fontFamily:FH,color:pathname==="/"?C.text:C.muted,background:pathname==="/"?C.s3:"transparent"}}>{t("nav.home")}</Link>
+          <Link href="/search" onClick={()=>setMobileOpen(false)} style={{padding:"11px 12px",borderRadius:9,fontSize:14.5,fontWeight:600,fontFamily:FH,color:pathname==="/search"?C.text:C.muted,background:pathname==="/search"?C.s3:"transparent"}}>{t("nav.search")}</Link>
+          <Link href="/vacancies" onClick={()=>setMobileOpen(false)} style={{padding:"11px 12px",borderRadius:9,fontSize:14.5,fontWeight:600,fontFamily:FH,color:pathname.startsWith("/vacancies")?C.text:C.muted,background:pathname.startsWith("/vacancies")?C.s3:"transparent"}}>{t("nav.vacancies")}</Link>
+          {GUIDE_LINKS.map((g) => (
+            <Link key={g.href} href={g.href} onClick={()=>setMobileOpen(false)} style={{padding:"11px 12px",borderRadius:9,fontSize:14.5,fontWeight:600,fontFamily:FH,color:pathname===g.href?C.text:C.muted,background:pathname===g.href?C.s3:"transparent"}}>{t(g.key)}</Link>
+          ))}
+          <Link href="/company" onClick={()=>setMobileOpen(false)} style={{padding:"11px 12px",borderRadius:9,fontSize:14.5,fontWeight:600,fontFamily:FH,color:pathname==="/company"?C.text:C.muted,background:pathname==="/company"?C.s3:"transparent"}}>{t("nav.about")}</Link>
+
+          <div style={{height:1,background:C.border,margin:"10px 0"}}/>
+
+          <div style={{display:"flex",gap:8,alignItems:"center",padding:"0 12px",marginBottom:10}}>
+            <button onClick={useGPS} disabled={gpsBusy} style={{display:"flex",alignItems:"center",gap:6,padding:"8px 12px",borderRadius:8,border:`1px solid ${C.border}`,background:"transparent",color:C.teal,fontFamily:FH,fontWeight:700,fontSize:12.5,cursor:gpsBusy?"default":"pointer"}}>
+              <LocateFixed size={13}/> {gpsBusy?t("nav.gpsLocating"):t("nav.gps")}
+            </button>
+            <select value={region ?? ""} onChange={(e)=>setRegion((e.target.value || null) as typeof region)}
+              style={{flex:1,padding:"8px 10px",borderRadius:8,border:`1px solid ${C.border}`,background:C.s2,color:C.text,fontFamily:FB,fontSize:13}}>
+              <option value="">{t("nav.allRegions")}</option>
+              {REGION_ORDER.map((r) => <option key={r} value={r}>{t(REGION_LABEL[r])}</option>)}
+            </select>
+          </div>
+
+          <div style={{display:"flex",padding:"0 12px",marginBottom:14}}>
+            <div style={{display:"flex",borderRadius:8,overflow:"hidden",border:`1px solid ${C.border}`}}>
+              <button onClick={()=>setLocale("tg")} style={{padding:"8px 14px",fontSize:12.5,fontWeight:700,color:locale==="tg"?C.bg:C.muted,fontFamily:FH,background:locale==="tg"?C.teal:"none",border:"none",cursor:"pointer"}}>ТҶ</button>
+              <button onClick={()=>setLocale("ru")} style={{padding:"8px 14px",fontSize:12.5,fontWeight:700,color:locale==="ru"?C.bg:C.muted,fontFamily:FH,background:locale==="ru"?C.teal:"none",border:"none",cursor:"pointer"}}>РУ</button>
+            </div>
+          </div>
+
+          <div style={{padding:"0 12px",display:"flex",flexDirection:"column",gap:8}}>
+            {role!=="guest" && cabinetHref && (
+              <Link href={cabinetHref} onClick={()=>setMobileOpen(false)} style={{textAlign:"center",padding:"11px 14px",borderRadius:9,fontFamily:FH,fontWeight:700,fontSize:14,color:C.teal,border:`1px solid ${C.teal}40`,background:`${C.teal}10`,textDecoration:"none"}}>
+                {t("nav.cabinet")}
+              </Link>
+            )}
+            {role==="guest" ? (
+              <Link href="/login" onClick={()=>setMobileOpen(false)} style={{textAlign:"center",padding:"11px 14px",borderRadius:9,fontFamily:FH,fontWeight:700,fontSize:14,background:C.teal,color:C.bg,textDecoration:"none"}}>
+                {t("nav.login")}
+              </Link>
+            ) : (
+              <>
+                {ROLE_OPTIONS.filter(o=>o.value!==role).map(opt=>(
+                  <button key={opt.value} onClick={()=>{chooseRole(opt); setMobileOpen(false);}} style={{textAlign:"left",padding:"10px 14px",borderRadius:9,background:C.s2,border:`1px solid ${C.border}`,color:C.text,fontFamily:FB,fontSize:13.5,cursor:"pointer"}}>
+                    {t(opt.key)}
+                  </button>
+                ))}
+                <button onClick={()=>{logout(); setMobileOpen(false);}} style={{display:"flex",alignItems:"center",gap:6,textAlign:"left",padding:"10px 14px",borderRadius:9,background:"transparent",border:`1px solid ${C.border}`,color:C.red,fontFamily:FB,fontSize:13.5,cursor:"pointer"}}>
+                  <LogOut size={13}/> {t("nav.logout")}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      <style jsx>{`
+        @media (max-width: 880px) {
+          .eh-nav-right-mobile { display: flex !important; }
+        }
+      `}</style>
     </header>
   );
 }

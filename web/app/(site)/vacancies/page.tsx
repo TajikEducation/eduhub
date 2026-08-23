@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Briefcase, Wallet, Clock, ChevronRight, Search, X } from "lucide-react";
 import { C, FH, FB, PHOTOS, VACANCIES, INSTITUTIONS, CATEGORY_META, REGION_LABEL, REGION_ORDER, type Vacancy, type Institution, type CategoryKey, type Region } from "@/lib/data";
-import { SubjectMotifs } from "@/components/SubjectMotifs";
 import { useReveal, revealStyle } from "@/lib/useReveal";
 import { useT } from "@/lib/i18n";
 
@@ -25,7 +24,7 @@ function VacancyRow({ v, inst, style }: { v: Vacancy; inst: Institution | undefi
   const Icon = meta?.icon;
   const accent = inst?.color ?? C.teal;
   return (
-    <Link href={inst ? `/institutions/${inst.id}?tab=vacancies&vacancy=${v.id}` : "#"} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+    <Link href={`/vacancies/${v.id}`} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       style={{ ...style, display: "flex", alignItems: "center", gap: 16, borderRadius: 16, border: `1px solid ${hov ? accent + "55" : C.border}`, background: C.s1, padding: "14px 20px 14px 14px", textDecoration: "none", transition: "all .22s", transform: hov ? "translateY(-3px)" : "none", boxShadow: hov ? "0 16px 40px rgba(0,0,0,.4)" : undefined }}>
       <div style={{ width: 64, height: 64, borderRadius: 12, overflow: "hidden", position: "relative", flexShrink: 0, background: accent }}>
         {inst?.coverPhoto && <img src={inst.coverPhoto} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
@@ -88,7 +87,6 @@ export default function VacanciesPage() {
       <div style={{ position: "relative", height: 260, overflow: "hidden" }}>
         <img src={PHOTOS.heroGuideA} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         <div style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg, ${C.overlay}55 0%, ${C.overlay}D8 75%, ${C.overlay} 100%)` }} />
-        <SubjectMotifs/>
         <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "flex-end" }}>
           <div style={{ maxWidth: 1260, margin: "0 auto", padding: "0 28px 28px", width: "100%" }}>
             <div style={{ width: 44, height: 44, borderRadius: 12, background: `${C.teal}22`, border: `1px solid ${C.teal}44`, display: "flex", alignItems: "center", justifyContent: "center" }}>

@@ -31,3 +31,22 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Мобильная деградация фиксированных grid-колонок (inline gridTemplateColumns
+   по всему сайту не имело брейкпоинтов вообще — !important нужен, чтобы
+   победить inline-стиль на mobile viewport). Не трогает grid'ы на
+   repeat(auto-fill,minmax(...)) — они уже сами адаптивны. */
+@media (max-width: 760px) {
+  .eh-mobile-1col {
+    grid-template-columns: 1fr !important;
+  }
+  /* Админ-панели с фиксированной боковой колонкой (aside width:240 + flex:1
+     контент) — на mobile колонка ужимает контент ниже его min-content и
+     переполняет экран вместо того чтобы уступить место. */
+  .eh-sidebar-shell {
+    flex-direction: column !important;
+  }
+  .eh-sidebar-shell > aside {
+    width: 100% !important;
+  }
+}

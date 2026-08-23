@@ -32,7 +32,7 @@ function TiersCard() {
   };
   return (
     <div style={{ maxWidth: 1080, margin: "0 auto", padding: "0 28px 48px" }}>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 14 }}>
+      <div className="eh-mobile-1col" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 14 }}>
         {TIERS.map(tier => (
           <div key={tier.name} style={{ borderRadius: 16, border: `1px solid ${C.border}`, background: C.s1, padding: 20 }}>
             <p style={{ fontFamily: FH, fontWeight: 800, fontSize: 15, color: C.text, marginBottom: 4 }}>{tier.name}</p>
