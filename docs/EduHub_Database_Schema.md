@@ -398,8 +398,8 @@ SRS §7, сущность `Child` — минимальная привязка р
 | `user_id` | UUID | нет | — | автор, по значению (кросс-схемно без FK) |
 | `institution_id` | UUID | нет | — | по значению (кросс-схемно без FK) — существование проверяется в usecase |
 | `child_id` | UUID | нет | — | по значению — привязка, дающая право на отзыв (FR-15), проверяется через порт `auth.ChildLinkExists` |
-| `text` | JSONB | нет | — | `{ru,tg}` |
-| `reply` | JSONB | да | `NULL` | ответ учреждения (FR-17) |
+| `text` | TEXT | нет | — | свободный текст на любом языке, независимо от языка интерфейса платформы (обновлено 2026-08-25 — было `JSONB{ru,tg}`; отзыв пишет живой человек в моменте на одном языке, не переводит сам себя на оба; тот же принцип, что уже применён к `communications.messages.body`) |
+| `reply` | TEXT | да | `NULL` | ответ учреждения (FR-17), тот же принцип |
 | `status` | TEXT | нет | `'pending'` | `pending`\|`approved`\|`rejected`\|`disputed`\|`resolved_kept`\|`resolved_removed` (обновлено 2026-08-25 — `disputed` больше не конечное состояние, спор разрешается в одно из двух явных состояний) |
 | `verified_at_publish` | BOOL | нет | — | **снимок** факта верификации на момент публикации (был ли `auth.children.confirmation_status='confirmed'` в этот момент) — критерий разрешения спора (FR-35: «была ли подтверждённая привязка **на момент публикации**») смотрит на этот снимок, не на текущее состояние `auth.children`, которое могло измениться (родитель удалил привязку, учреждение отозвало подтверждение) |
 | `dispute_deadline` | TIMESTAMPTZ | да | `NULL` | SLA 72ч на разрешение спора (FR-35) |
@@ -699,7 +699,7 @@ Web Push подписки (Push API + Service Worker, встроенный бр�
 | `id` | UUID PK | нет | `gen_random_uuid()` | — |
 | `institution_id` | UUID | нет | — | по значению |
 | `applicant_id` | UUID FK→`communications.applicants(id)` ON DELETE CASCADE | нет | — | — |
-| `message` | JSONB | нет | — | `{ru,tg}` |
+| `message` | TEXT | нет | — | свободный текст (обновлено 2026-08-25 — было `JSONB{ru,tg}`, пишет живой человек, тот же принцип что `reviews.reviews.text`) |
 | `created_at` | TIMESTAMPTZ | нет | `now()` | — |
 
 **Связи:** N—1 `communications.applicants`.
