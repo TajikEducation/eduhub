@@ -616,6 +616,19 @@ In-app уведомления (FR-20 — часть общего уведоми�
 **Связи:** нет физических FK.
 **Индексы:** `btree(user_id, read, created_at DESC)`.
 
+### `communications.processed_events`
+
+Дедупликация at-least-once доставки Redis Streams — добавлено 2026-08-25. Нужна именно здесь (не в `reviews`), потому что `RatingSync.Apply` пишет **абсолютные значения** (текущее взвешенное среднее, не инкремент) и естественно идемпотентен без dedup-стора — а вот уведомления (push/in-app) **не идемпотентны по построению**: повторная доставка того же `event_id` реально отправит пользователю второй push о том же событии.
+
+| Поле | Тип | Nullable | Default | Описание |
+|---|---|---|---|---|
+| `event_id` | UUID PK | нет | — | = `reviews.outbox.id` (или другого источника outbox) события |
+| `processed_at` | TIMESTAMPTZ | нет | `now()` | — |
+
+**Связи:** нет FK (событие уже могло исходить из другой схемы).
+**Индексы:** `PK(event_id)`. Консьюмер сначала `INSERT` — конфликт означает «уже обработано», пропустить без побочных эффектов (повторной отправки push).
+**TTL:** запись может чиститься фоновым джобом через N дней — outbox-событие столько не живёт в принципе, дедупликация нужна только на окно повторной доставки.
+
 ### `communications.push_subscriptions`
 
 Web Push подписки (Push API + Service Worker, встроенный браузерный стандарт — НЕ внешний платный провайдер, в отличие от SMS/email; добавлено 2026-08-25 в MVP-скоуп, т.к. NFR CLAUDE.md называет push основным каналом PWA и здесь нет причины откладывать вместе с SMS/email). Один пользователь может иметь несколько подписок (несколько устройств/браузеров).
@@ -778,9 +791,9 @@ Web Push подписки (Push API + Service Worker, встроенный бр�
 | `catalog` | `institutions`, `institution_owners`, `institution_staff`, `achievements`, `institution_gallery`, `institution_alumni`, `news_articles`, `institution_metrics`, `institution_owner_verifications` | 9 |
 | `reviews` | `reviews`, `review_metrics`, `institution_rating_agg`, `outbox`, `employer_reviews`, `employer_review_metrics` | 6 |
 | `moderation` | `audit_log`, `queue_items` | 2 |
-| `communications` | `conversations`, `messages`, `notifications`, `push_subscriptions`, `vacancies`, `applicants`, `applicant_achievements`, `applications`, `employer_responses`, `visit_requests` | 10 |
+| `communications` | `conversations`, `messages`, `notifications`, `processed_events`, `push_subscriptions`, `vacancies`, `applicants`, `applicant_achievements`, `applications`, `employer_responses`, `visit_requests` | 11 |
 | `analytics` | `profile_events`, `profile_events_daily` | 2 |
-| **Итого** | | **37** |
+| **Итого** | | **38** |
 
 ## Диаграмма связей (текстовая, ключевые FK)
 
