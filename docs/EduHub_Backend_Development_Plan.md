@@ -2,7 +2,7 @@
 
 **Статус:** Готов к реализации.
 
-Источники истины, использованные при планировании: `docs/EduHub_Technical_Specification.docx` (SRS), `docs/EduHub_Functional_Requirements.md` (FR детально), `docs/EduHub_Database_Schema.md` (полная схема БД), `docs/EduHub_Pricing_Tiers.md` (тарифы), `web/lib/data.ts` и `web/lib/app-state.tsx` (текущие контракты фронта, который бэкенд должен заменить).
+Источники истины, использованные при планировании: `docs/EduHub_Technical_Specification.docx` (SRS), `docs/EduHub_Functional_Requirements.md` (FR детально), `docs/EduHub_Database_Schema.md` (полная схема БД), `docs/EduHub_Pricing_Tiers.md` (тарифы), `docs/EduHub_Backend_Architecture.md` (сквозные архитектурные решения — слои, границы сервисов, логирование, ошибки, конкурентность, безопасность, деплой — детальнее, чем в разделе Architecture ниже), `web/lib/data.ts` и `web/lib/app-state.tsx` (текущие контракты фронта, который бэкенд должен заменить).
 
 ---
 
