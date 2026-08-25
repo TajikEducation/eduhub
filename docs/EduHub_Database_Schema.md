@@ -545,19 +545,23 @@ Transactional outbox — публикация отзыва пишет отзыв
 
 ### `communications.conversations`
 
-Диалог «родитель ↔ учреждение» (FR-19) — один диалог на пару. Раздельные `*_last_read_at` по сторонам, поскольку прочтение одной стороной не означает прочтение другой.
+Диалог (FR-19) — **обобщено 2026-08-25**: не только «родитель ↔ учреждение», но и «родитель ↔ родитель» (пользователи тоже могут общаться друг с другом). Оба участника — полиморфные слоты, каждый может быть либо пользователем, либо учреждением. Раздельные `*_last_read_at` по сторонам, поскольку прочтение одной стороной не означает прочтение другой.
 
 | Поле | Тип | Nullable | Default | Описание |
 |---|---|---|---|---|
 | `id` | UUID PK | нет | `gen_random_uuid()` | он же `conv` в `chat:conv:{id}` (Redis Pub/Sub канал, план E5.2) |
-| `user_id` | UUID | нет | — | по значению |
-| `institution_id` | UUID | нет | — | по значению |
-| `user_last_read_at` | TIMESTAMPTZ | да | `NULL` | до какого момента прочитано родителем |
-| `institution_last_read_at` | TIMESTAMPTZ | да | `NULL` | до какого момента прочитано учреждением |
+| `participant_a_type` | TEXT | нет | — | `user`\|`institution` (CHECK) |
+| `participant_a_id` | UUID | нет | — | по значению |
+| `participant_b_type` | TEXT | нет | — | `user`\|`institution` (CHECK) |
+| `participant_b_id` | UUID | нет | — | по значению |
+| `participant_a_last_read_at` | TIMESTAMPTZ | да | `NULL` | — |
+| `participant_b_last_read_at` | TIMESTAMPTZ | да | `NULL` | — |
 | `created_at` | TIMESTAMPTZ | нет | `now()` | — |
 
 **Связи:** 1—N `communications.messages`.
-**Индексы:** `UNIQUE(user_id, institution_id)`.
+**Индексы:** `UNIQUE(participant_a_type, participant_a_id, participant_b_type, participant_b_id)` — при создании диалога usecase **канонизирует порядок** участников (например сортировкой по `type`, затем по `id`) до вставки, чтобы пара «X↔Y» и «Y↔X» не создали два разных диалога — канонизация в usecase, не в БД (тот же принцип, что уже применён для нескольких других полей сегодня).
+**Список диалогов пользователя** (`GET /api/v1/conversations`) — `WHERE (participant_a_type=$my_type AND participant_a_id=$my_id) OR (participant_b_type=$my_type AND participant_b_id=$my_id)`, каждая запись отдаёт «собеседника» как `{type:"user", display_name}` или `{type:"institution", name}` — фронт рендерит по-разному, схема одна.
+**Открытый вопрос (не блокирует схему):** механизм **обнаружения** — как пользователь находит `user_id` другого родителя, чтобы начать диалог (приватность: не должен раскрывать, что конкретный человек — родитель конкретного учреждения без его согласия) — отдельная продуктовая задача до реализации вехи 5.
 
 ### `communications.messages`
 
@@ -795,7 +799,7 @@ catalog.institutions ──┬─< catalog.institution_owners
                         ├─< catalog.news_articles
                         ├─< catalog.institution_metrics
                         ├─  (по institution_id, без FK) reviews.reviews
-                        ├─  (по institution_id, без FK) communications.conversations
+                        ├─  (по participant_*_id, без FK) communications.conversations
                         ├─  (по institution_id, без FK) communications.visit_requests
                         └─  (по institution_id, без FK) communications.vacancies
 
@@ -804,7 +808,7 @@ reviews.reviews ──┬─< reviews.review_metrics
 
 reviews.employer_reviews ──< reviews.employer_review_metrics   (полностью отдельно от родительского рейтинга; видимость — только соискателям, см. описание таблицы)
 
-communications.conversations ──< communications.messages (sender_type различает родителя/учреждение)
+communications.conversations (participant_a/b — user ИЛИ institution, полиморфно) ──< communications.messages (sender_type различает участников)
 
 communications.applicants ──┬─< communications.applications >── FK ──> communications.vacancies
                              └─< communications.employer_responses
