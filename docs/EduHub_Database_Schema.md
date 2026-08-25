@@ -74,6 +74,7 @@
 | `consent_version` | TEXT | нет | — | версия текста политики, на которую согласился пользователь — при обновлении политики старое согласие не считается действительным на новую версию |
 | `failed_login_count` | INT | нет | `0` | anti-bruteforce (E2.7) |
 | `locked_until` | TIMESTAMPTZ | да | `NULL` | блокировка входа после N неудач |
+| `notification_channels` | JSONB | нет | `'{"push":true,"email":true}'` | простой набор переключателей канала уведомлений (добавлено 2026-08-25) — не история, поэтому не отдельная таблица |
 | `deleted_at` | TIMESTAMPTZ | да | `NULL` | момент soft-delete — при заполнении `email`/`phone`/`password_hash` затираются анонимизирующим значением |
 | `created_at` | TIMESTAMPTZ | нет | `now()` | — |
 | `updated_at` | TIMESTAMPTZ | нет | `now()` | — |
@@ -609,6 +610,23 @@ In-app уведомления (FR-20 — часть общего уведоми�
 **Связи:** нет физических FK.
 **Индексы:** `btree(user_id, read, created_at DESC)`.
 
+### `communications.push_subscriptions`
+
+Web Push подписки (Push API + Service Worker, встроенный браузерный стандарт — НЕ внешний платный провайдер, в отличие от SMS/email; добавлено 2026-08-25 в MVP-скоуп, т.к. NFR CLAUDE.md называет push основным каналом PWA и здесь нет причины откладывать вместе с SMS/email). Один пользователь может иметь несколько подписок (несколько устройств/браузеров).
+
+| Поле | Тип | Nullable | Default | Описание |
+|---|---|---|---|---|
+| `id` | UUID PK | нет | `gen_random_uuid()` | — |
+| `user_id` | UUID | нет | — | по значению |
+| `endpoint` | TEXT | нет | — | URL пуш-сервера браузера пользователя (Google/Mozilla/Apple — у каждого свой), уникален по своей природе |
+| `p256dh_key` | TEXT | нет | — | ключ шифрования сообщения (Web Push API) |
+| `auth_key` | TEXT | нет | — | ключ аутентификации (Web Push API) |
+| `user_agent` | TEXT | да | `NULL` | для отладки/отображения «какое устройство» пользователю |
+| `created_at` | TIMESTAMPTZ | нет | `now()` | — |
+
+**Связи:** нет физических FK (кросс-схемно).
+**Индексы:** `UNIQUE(endpoint)`.
+
 ### `communications.vacancies`
 
 Вакансия учреждения (FR-36).
@@ -737,9 +755,9 @@ In-app уведомления (FR-20 — часть общего уведоми�
 | `catalog` | `institutions`, `institution_owners`, `institution_staff`, `achievements`, `institution_gallery`, `institution_alumni`, `news_articles`, `institution_metrics`, `institution_owner_verifications` | 9 |
 | `reviews` | `reviews`, `review_metrics`, `institution_rating_agg`, `outbox`, `employer_reviews`, `employer_review_metrics` | 6 |
 | `moderation` | `audit_log`, `queue_items` | 2 |
-| `communications` | `conversations`, `messages`, `notifications`, `vacancies`, `applicants`, `applications`, `employer_responses`, `visit_requests` | 8 |
+| `communications` | `conversations`, `messages`, `notifications`, `push_subscriptions`, `vacancies`, `applicants`, `applications`, `employer_responses`, `visit_requests` | 9 |
 | `analytics` | `profile_events`, `profile_events_daily` | 2 |
-| **Итого** | | **35** |
+| **Итого** | | **36** |
 
 ## Диаграмма связей (текстовая, ключевые FK)
 
