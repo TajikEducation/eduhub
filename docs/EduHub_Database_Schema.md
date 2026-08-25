@@ -726,7 +726,7 @@ Web Push подписки (Push API + Service Worker, встроенный бр�
 | `created_at` | TIMESTAMPTZ | нет | `now()` | — |
 
 **Связи:** N—1 `communications.applicants`.
-**Индексы:** `UNIQUE(institution_id, applicant_id)` — идемпотентность обращения; защита от спама (FR-37) — дополнительный rate limit в usecase, не в схеме.
+**Индексы:** `btree(institution_id, applicant_id, created_at)`. **Без постоянного `UNIQUE(institution_id, applicant_id)`** (исправлено 2026-08-25 — раньше было, ошибочно смешивало две разные защиты): FR-37 требует лимит обращений **за период**, не «одно обращение навсегда» — постоянный `UNIQUE` мешал бы легитимному повторному обращению через год по другой вакансии. Идемпотентность одного конкретного запроса (защита от дубль-клика) — через `Idempotency-Key` (`platform.idempotency_keys`). Анти-спам лимит за период (FR-37) — Redis-счётчик в usecase, не constraint в БД (скользящее окно «последние N дней» неудобно выразить постоянным индексом).
 
 ---
 
