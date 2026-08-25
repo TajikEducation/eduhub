@@ -248,6 +248,28 @@ SRS §7, сущность `Child` — минимальная привязка р
 **Связи:** N—1 `catalog.institutions` (внутри своей схемы — FK разрешён).
 **Индексы:** `PK(institution_id, metric_key)`.
 
+### `catalog.institution_owner_verifications`
+
+Материалы верификации владельца профиля учреждения (FR-34) — сейчас `institutions.verified BOOL` хранил только результат, без документа/обоснования, на основе которых модератор принял решение (добавлено 2026-08-25). По закону РТ о лицензировании — **государственные детсады и школы (начальное/основное/общее среднее) лицензированию не подлежат вообще**, лицензия нужна только частным организациям (лицеи/гимназии/колледжи/вузы/частные центры) — `document_type` отражает эту разницу, а не считает отсутствие лицензии у госучреждения дефектом.
+
+| Поле | Тип | Nullable | Default | Описание |
+|---|---|---|---|---|
+| `id` | UUID PK | нет | `gen_random_uuid()` | каждая попытка — отдельная строка, история не удаляется даже при отклонении |
+| `institution_id` | UUID FK→`catalog.institutions(id)` ON DELETE CASCADE | нет | — | — |
+| `submitted_by` | UUID | нет | — | кто подал заявку — по значению |
+| `document_type` | TEXT | нет | — | `license`\|`state_status_confirmation`\|`appointment_proof`\|`business_registration`\|`manual_exception`\|`other` (CHECK) |
+| `document_s3_key` | TEXT | да | `NULL` | пусто при `manual_exception` |
+| `license_no_claimed` | TEXT | да | `NULL` | заявленный номер лицензии на момент подачи — снимок, `institutions.license_no` может измениться позже |
+| `verification_notes` | TEXT | да | `NULL` | **обязательно** (проверка в usecase) при `document_type='manual_exception'` — письменное обоснование модератора, почему подтвердил без документа |
+| `status` | TEXT | нет | `'pending'` | `pending`\|`approved`\|`rejected` (CHECK) |
+| `reviewed_by` | UUID | да | `NULL` | модератор — по значению |
+| `reviewed_at` | TIMESTAMPTZ | да | `NULL` | — |
+| `created_at` | TIMESTAMPTZ | нет | `now()` | — |
+
+**Связи:** N—1 `catalog.institutions` (внутри своей схемы — FK разрешён).
+**Индексы:** `btree(institution_id, created_at DESC)`; `btree(status)` (очередь модератора).
+**Эффект при `approved`:** `catalog.institutions.verified` ставится в `true`; предыдущие отклонённые попытки не удаляются — полная история заявок хранится.
+
 ### `catalog.institution_owners`
 
 Кто из пользователей владеет профилем учреждения (для RBAC на мутациях, E3.3-E3.4).
@@ -711,12 +733,12 @@ In-app уведомления (FR-20 — часть общего уведоми�
 |---|---|---|
 | `platform` | `idempotency_keys`, `seed_refs` | 2 |
 | `auth` | `users`, `refresh_tokens`, `children`, `oauth_identities`, `verification_codes`, `employment_claims` | 6 |
-| `catalog` | `institutions`, `institution_owners`, `institution_staff`, `achievements`, `institution_gallery`, `institution_alumni`, `news_articles`, `institution_metrics` | 8 |
+| `catalog` | `institutions`, `institution_owners`, `institution_staff`, `achievements`, `institution_gallery`, `institution_alumni`, `news_articles`, `institution_metrics`, `institution_owner_verifications` | 9 |
 | `reviews` | `reviews`, `review_metrics`, `institution_rating_agg`, `outbox`, `employer_reviews`, `employer_review_metrics` | 6 |
 | `moderation` | `audit_log`, `queue_items` | 2 |
 | `communications` | `conversations`, `messages`, `notifications`, `vacancies`, `applicants`, `applications`, `employer_responses`, `visit_requests` | 8 |
 | `analytics` | `profile_events`, `profile_events_daily` | 2 |
-| **Итого** | | **34** |
+| **Итого** | | **35** |
 
 ## Диаграмма связей (текстовая, ключевые FK)
 
