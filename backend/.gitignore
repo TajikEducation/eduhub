@@ -1,0 +1,32 @@
+# Environment
+.env
+.env.*
+!.env.example
+
+# Build output
+bin/
+/api
+/devseed
+/worker
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Dependency vendoring (only if ever vendored)
+vendor/
+
+# Coverage
+coverage.html
+coverage.txt
+coverage.out
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
