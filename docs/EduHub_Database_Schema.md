@@ -503,8 +503,9 @@ Transactional outbox — публикация отзыва пишет отзыв
 | Поле | Тип | Nullable | Default | Описание |
 |---|---|---|---|---|
 | `id` | UUID PK | нет | `gen_random_uuid()` | — |
-| `actor_id` | UUID | нет | — | кто принял решение, по значению |
-| `actor_role` | TEXT | нет | — | снимок роли на момент действия (роль могла измениться позже) |
+| `actor_id` | UUID | да | `NULL` | кто принял решение, по значению; `NULL` для системных действий |
+| `actor_type` | TEXT | нет | `'user'` | `user`\|`system` (CHECK, добавлено 2026-08-25) — системные действия (авто-флаг велосити-детектора FR-18, автовозврат claim по таймауту, ночные джобы) не имеют человека-актора |
+| `actor_role` | TEXT | да | `NULL` | снимок роли на момент действия (роль могла измениться позже); `NULL` при `actor_type='system'` |
 | `action` | TEXT | нет | — | `institution.approve`\|`institution.reject`\|`review.approve`\|`review.reject`\|`review.dispute_resolve`\|`owner.verify`\|... |
 | `target_type` | TEXT | нет | — | `institution`\|`review`\|`vacancy`\|... |
 | `target_id` | UUID | нет | — | — |
