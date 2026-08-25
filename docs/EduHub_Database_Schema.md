@@ -118,6 +118,24 @@
 **Связи:** N—1 `auth.users`.
 **Индексы:** `btree(user_id, channel, purpose)`; частота отправки — Redis-счётчик по email+IP, не в этой таблице.
 
+### `auth.employment_claims`
+
+Заявка сотрудника (текущего/бывшего) на подтверждение трудоустройства — основа для отзыва об учреждении как о работодателе (`reviews.employer_reviews`, добавлено 2026-08-25). **Принципиально не как `auth.children`**: верификацию делает **модератор платформы**, не само учреждение — если бы учреждение подтверждало, оно могло бы просто не подтверждать авторов негативных отзывов, что убивает цель честного отзыва о работодателе.
+
+| Поле | Тип | Nullable | Default | Описание |
+|---|---|---|---|---|
+| `id` | UUID PK | нет | `gen_random_uuid()` | — |
+| `user_id` | UUID FK→`auth.users(id)` ON DELETE CASCADE | нет | — | — |
+| `institution_id` | UUID FK→`catalog.institutions(id)` ON DELETE RESTRICT | нет | — | тот же паттерн исключения, что у `children` |
+| `position` | TEXT | да | `NULL` | должность, информационно |
+| `employment_status` | TEXT | нет | — | `current`\|`former` (CHECK) |
+| `verification_status` | TEXT | нет | `'pending'` | `pending`\|`verified`\|`rejected` (CHECK) — решает модератор, не учреждение |
+| `evidence_s3_key` | TEXT | да | `NULL` | опциональный подтверждающий документ (трудовой договор/справка) |
+| `created_at` | TIMESTAMPTZ | нет | `now()` | — |
+
+**Связи:** N—1 `auth.users`; N—1 `catalog.institutions`.
+**Индексы:** `UNIQUE(user_id, institution_id)`; `btree(verification_status)` (очередь модератора).
+
 ### `auth.refresh_tokens`
 
 Ротация сессий с reuse-detection (E2.3).
@@ -359,8 +377,11 @@ SRS §7, сущность `Child` — минимальная привязка р
 | `child_id` | UUID | нет | — | по значению — привязка, дающая право на отзыв (FR-15), проверяется через порт `auth.ChildLinkExists` |
 | `text` | JSONB | нет | — | `{ru,tg}` |
 | `reply` | JSONB | да | `NULL` | ответ учреждения (FR-17) |
-| `status` | TEXT | нет | `'pending'` | `pending`\|`approved`\|`rejected`\|`disputed` |
+| `status` | TEXT | нет | `'pending'` | `pending`\|`approved`\|`rejected`\|`disputed`\|`resolved_kept`\|`resolved_removed` (обновлено 2026-08-25 — `disputed` больше не конечное состояние, спор разрешается в одно из двух явных состояний) |
+| `verified_at_publish` | BOOL | нет | — | **снимок** факта верификации на момент публикации (был ли `auth.children.confirmation_status='confirmed'` в этот момент) — критерий разрешения спора (FR-35: «была ли подтверждённая привязка **на момент публикации**») смотрит на этот снимок, не на текущее состояние `auth.children`, которое могло измениться (родитель удалил привязку, учреждение отозвало подтверждение) |
 | `dispute_deadline` | TIMESTAMPTZ | да | `NULL` | SLA 72ч на разрешение спора (FR-35) |
+| `disputed_by` | UUID | да | `NULL` | кто эскалировал спор (обычно представитель учреждения) — по значению |
+| `dispute_reason` | TEXT | да | `NULL` | — |
 | `created_at` | TIMESTAMPTZ | нет | `now()` | используется в decay-формуле (`age_days`) |
 | `updated_at` | TIMESTAMPTZ | нет | `now()` | — |
 
@@ -395,6 +416,39 @@ SRS §7, сущность `Child` — минимальная привязка р
 
 **Связи:** логически N—1 `catalog.institutions` (без FK).
 **Индексы:** `PK(institution_id, metric_key)`.
+
+### `reviews.employer_reviews`
+
+Отзыв сотрудника (текущего/бывшего) об учреждении **как о работодателе** — добавлено 2026-08-25, ранее сознательно отложено (7-я волна фронта: ломало модель верификации через `Child`, метрики несовместимы с родительскими, риск для монетизации). Все три причины сняты дизайном: верификация через модератора (не через `Child`), полностью отдельные метрики (не влияют на `catalog.institution_metrics`/`rating_avg`), видимость ограничена соискателями (см. ниже) — учреждение как платящий клиент никогда не видит это на своей публичной родительской витрине.
+
+| Поле | Тип | Nullable | Default | Описание |
+|---|---|---|---|---|
+| `id` | UUID PK | нет | `gen_random_uuid()` | — |
+| `user_id` | UUID | нет | — | по значению |
+| `institution_id` | UUID | нет | — | по значению |
+| `employment_claim_id` | UUID | нет | — | по значению — ссылка на подтверждённую (`verification_status='verified'`) запись `auth.employment_claims` |
+| `text` | TEXT | нет | — | свободный текст (НЕ `JSONB{ru,tg}` — пишет один человек на одном языке) |
+| `reply` | TEXT | да | `NULL` | ответ учреждения — разрешён (не может скрыть отзыв, но может публично ответить — снимает конфликт интересов иначе) |
+| `status` | TEXT | нет | `'pending'` | `pending`\|`approved`\|`rejected` — тот же модерационный цикл, что и родительские отзывы (FR-16) |
+| `created_at` | TIMESTAMPTZ | нет | `now()` | — |
+
+**Связи:** N—1 `auth.employment_claims` (по значению — `reviews` не владеет схемой `auth`).
+**Индексы:** `UNIQUE(user_id, institution_id)` — один отзыв о работодателе на пару; `btree(institution_id, status)`.
+**Видимость (жёстко ограничена, не просто RBAC-роль):** `GET /api/v1/institutions/{id}/employer-reviews` требует аутентификации И наличия собственной записи в `communications.applicants` (то есть пользователь — соискатель). Родители, гости, обычные пользователи без анкеты соискателя не видят ни через профиль учреждения, ни по прямой ссылке.
+
+### `reviews.employer_review_metrics`
+
+5 метрик отзыва о работодателе, нормализовано по строкам (тот же паттерн, что `review_metrics`).
+
+| Поле | Тип | Nullable | Default | Описание |
+|---|---|---|---|---|
+| `id` | UUID PK | нет | `gen_random_uuid()` | — |
+| `employer_review_id` | UUID FK→`reviews.employer_reviews(id)` ON DELETE CASCADE | нет | — | — |
+| `metric_key` | TEXT | нет | — | `salary_conditions`\|`management`\|`team_atmosphere`\|`workload`\|`professional_growth` (CHECK, 5 значений) |
+| `score` | SMALLINT | нет | — | `1..5` (CHECK) |
+
+**Связи:** N—1 `reviews.employer_reviews`.
+**Индексы:** `UNIQUE(employer_review_id, metric_key)`.
 
 ### `reviews.outbox`
 
@@ -656,13 +710,13 @@ In-app уведомления (FR-20 — часть общего уведоми�
 | Схема | Таблицы | Кол-во |
 |---|---|---|
 | `platform` | `idempotency_keys`, `seed_refs` | 2 |
-| `auth` | `users`, `refresh_tokens`, `children`, `oauth_identities`, `verification_codes` | 5 |
+| `auth` | `users`, `refresh_tokens`, `children`, `oauth_identities`, `verification_codes`, `employment_claims` | 6 |
 | `catalog` | `institutions`, `institution_owners`, `institution_staff`, `achievements`, `institution_gallery`, `institution_alumni`, `news_articles`, `institution_metrics` | 8 |
-| `reviews` | `reviews`, `review_metrics`, `institution_rating_agg`, `outbox` | 4 |
+| `reviews` | `reviews`, `review_metrics`, `institution_rating_agg`, `outbox`, `employer_reviews`, `employer_review_metrics` | 6 |
 | `moderation` | `audit_log`, `queue_items` | 2 |
 | `communications` | `conversations`, `messages`, `notifications`, `vacancies`, `applicants`, `applications`, `employer_responses`, `visit_requests` | 8 |
 | `analytics` | `profile_events`, `profile_events_daily` | 2 |
-| **Итого** | | **31** |
+| **Итого** | | **34** |
 
 ## Диаграмма связей (текстовая, ключевые FK)
 
@@ -671,6 +725,7 @@ auth.users ──┬─< auth.refresh_tokens
              ├─< auth.oauth_identities
              ├─< auth.verification_codes
              ├─< auth.children >── FK ──> catalog.institutions   (согласованное исключение)
+             ├─< auth.employment_claims >── FK ──> catalog.institutions   (тот же паттерн, верификация модератором)
              └─  (по user_id, без FK) владелец/актор во всех остальных схемах
 
 catalog.institutions ──┬─< catalog.institution_owners
@@ -686,6 +741,8 @@ catalog.institutions ──┬─< catalog.institution_owners
 
 reviews.reviews ──┬─< reviews.review_metrics
                    └─  (агрегируется в) reviews.institution_rating_agg ──> порт RatingSync (per-metric) ──> catalog.institution_metrics + catalog.institutions.rating_avg
+
+reviews.employer_reviews ──< reviews.employer_review_metrics   (полностью отдельно от родительского рейтинга; видимость — только соискателям, см. описание таблицы)
 
 communications.conversations ──< communications.messages (sender_type различает родителя/учреждение)
 
