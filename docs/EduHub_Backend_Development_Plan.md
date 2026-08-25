@@ -137,9 +137,9 @@ backend/
 Что: `go mod init github.com/abdulhalim/eduhub/backend` (Go 1.23+). `Makefile`: `run/test/test-race/test-integration/lint/vet/vuln/migrate-up/migrate-down/seed`. `.env.example` с `APP_ENV/HTTP_ADDR/DATABASE_URL/LOG_LEVEL` (реальный `.env` в `.gitignore`).
 Приёмка: `cd backend && go build ./...` без ошибок; `git status` не показывает `.env`.
 
-**2. `docker-compose.yml` — Postgres+PostGIS и Redis**
-Что: `postgis/postgis:16-3.4` (порт 5433), `redis:7-alpine`, healthcheck, init-скрипт создаёт `eduhub_test`.
-Приёмка: `docker compose up -d && docker compose ps` — оба `healthy`; `psql "$DATABASE_URL" -c "SELECT postgis_version()"` печатает версию.
+**2. `docker-compose.yml` — Postgres+PostGIS, Redis, MinIO**
+Что: `postgis/postgis:16-3.4` (порт 5433), `redis:7-alpine`, `minio/minio` (добавлено 2026-08-25 — S3-совместимое хранилище, **только dev/test**, в проде реальный S3-совместимый провайдер по конфигу; нужен уже с вехи 3, где загрузка медиа переведена на multipart через бэкенд — без него интеграционные тесты загрузки не на чем гонять), healthcheck, init-скрипт создаёт `eduhub_test`.
+Приёмка: `docker compose up -d && docker compose ps` — все три `healthy`; `psql "$DATABASE_URL" -c "SELECT postgis_version()"` печатает версию; `curl -f http://localhost:9000/minio/health/live` → 200.
 
 **3. `internal/platform/config` — загрузка конфигурации**
 RED: (а) все переменные заданы → `Load()` без ошибки; (б) `DATABASE_URL` пуст → ошибка с именем переменной; (в) `HTTP_ADDR` не задан → дефолт `:8080`.
@@ -198,11 +198,11 @@ RED: CORS — preflight с разрешённым Origin → 204+заголов�
 GREEN: in-memory token bucket по IP с TTL-очисткой. Комментарий: при мультиинстансе лимитер станет Redis-based (веха 5) — сейчас per-instance осознанно.
 Приёмка: `go test -race ./internal/platform/httpx/ -run 'TestCORS|TestRateLimit' -v` → PASS.
 
-**16. CI и линтеры**
-Что: `.golangci.yml` (`errcheck/govet/staticcheck/nilerr/nilnil/bodyclose/rowserrcheck/contextcheck/exhaustive/gosec/noctx`), GitHub Actions job `backend`: `go vet` → `golangci-lint run` → `go test -race ./...` → `go test -tags=integration ./...` (сервисный контейнер postgis) → `govulncheck ./...`.
-Приёмка: `make lint` → 0 issues; `make vuln` → No vulnerabilities; push в ветку → CI job зелёный.
+**16. CI, линтеры, Dockerfile**
+Что: `.golangci.yml` (`errcheck/govet/staticcheck/nilerr/nilnil/bodyclose/rowserrcheck/contextcheck/exhaustive/gosec/noctx`), GitHub Actions job `backend`: `go vet` → `golangci-lint run` → `go test -race ./...` → `go test -tags=integration ./...` (сервисный контейнер postgis) → `govulncheck ./...` → **`docker build`** (добавлено 2026-08-25). Deploy-артефакт: `Dockerfile` — multi-stage build (`.claude/rules/devops.md`), builder-слой `golang:1.23` собирает статический бинарник (`CGO_ENABLED=0`), финальный слой `distroless/static` (без шелла/пакетного менеджера — меньше поверхность атаки), `.dockerignore` исключает `.git`/тесты/локальные `.env`, секреты — только через переменные окружения контейнера, не в образе. Без CI-шага сборки образа можно накопить дрейф между локальной сборкой и тем, что реально задеплоится.
+Приёмка: `make lint` → 0 issues; `make vuln` → No vulnerabilities; `docker build -t eduhub-api .` без ошибок, `docker run --rm eduhub-api` (с валидным `DATABASE_URL` и т.д.) поднимает сервер, `/healthz` отвечает 200 изнутри контейнера; push в ветку → CI job зелёный, включая шаг `docker build`.
 
-**Критерий готовности вехи 0:** `make test-race && make lint && make vuln` зелёные; `make migrate-up && make migrate-down` идемпотентны; `/healthz` 200, `/readyz` 503 при остановленном Postgres.
+**Критерий готовности вехи 0:** `make test-race && make lint && make vuln` зелёные; `make migrate-up && make migrate-down` идемпотентны; `/healthz` 200, `/readyz` 503 при остановленном Postgres; `docker build` проходит в CI.
 
 ---
 
@@ -503,9 +503,10 @@ GREEN: декоратор `CachedService` поверх `Service`, ключ `cata
 | 32 | `auth.users` без имени и предпочитаемой локали — фронт показывает автора отзыва, уведомления некому языку локализовать | `display_name TEXT NULL` (не строгое ФИО, вводит сам пользователь, `NULL`→«Родитель» по умолчанию — минимизация PII) + `locale` (`ru`/`tg`, для локализации push/email) |
 | 33 | Достижения соискателя (`web/lib/data.ts:2002`) негде хранить — `catalog.achievements` не покрывает `applicant`, а добавить туда нарушило бы владение схемами | `communications.applicant_achievements` — продублированная структура (не переиспользование чужой схемы), тот же паттерн что `employer_review_metrics`/`review_metrics` |
 | 34 | Наблюдаемость (E6.6) приезжает только в вехе 6, вехи 0-5 без метрик | Пересмотрено и убрано полностью, не перенесено раньше — без стейджинга/прода метрики некому скрейпить, мёртвая инфраструктура. NFR на вехах 0-5 — ручной `hey`-прогон (задача 31 и аналоги), не мониторинг. Перенесено в Out of scope |
+| 35 | Нет деплой-артефакта: `Dockerfile` не создаётся ни одной задачей, CI не собирает образ, MinIO нет в compose (вехи 3/5 пишут в S3 после перехода на multipart) | `docker-compose.yml` (задача 2) + MinIO; `Dockerfile` (multi-stage, distroless) и `docker build` в CI — присоединено к задаче 16, не отдельным номером (избежали коллизии нумерации с вехой 1) |
 
 **Закрыто в ревизии 2026-08-25** (решения #10-25 в таблице выше): контакты/описание институции, per-metric RatingSync, `auth.children` UNIQUE, FK-миф в E2.6, мультиучреждение+подтверждение учреждением, чат conversations/sender_type, FR-40 email/Google-приоритет+удаление аккаунта, idempotency race-fix, natural-key UNIQUE на регистрации, `visit_requests`, роль «Администратор платформы» (МОН убран из продукта целиком), FR-25 буст убран → utility-тарифы (`docs/EduHub_Pricing_Tiers.md`), FR-35 снимок верификации на момент публикации, отзывы о работодателе (FR-41), хранилище материалов FR-34, presigned→multipart-загрузка с серверным сжатием.
 
-**Остаётся отложенным на отдельный проход** (не критичные находки go-reviewer): отсутствие Dockerfile/CI-build/MinIO в compose, ограниченная перф-стратегия (только веха 1), лимиты чата (rate-limit на отправку, доступ), версионирование API без политики, пожизненная уникальность `employer_responses` vs лимит за период, `moderation.queue_items` без UNIQUE на активный target, идемпотентность консьюмера «по event_id» без dedup-стора, партиционирование `analytics.profile_events` без джоба управления + `DROP PARTITION` (неверный синтаксис, нужен `DETACH`+`DROP TABLE`), критерий готовности вехи 3 vs назначение `audit_log`.
+**Остаётся отложенным на отдельный проход** (не критичные находки go-reviewer): ограниченная перф-стратегия (только веха 1), лимиты чата (rate-limit на отправку, доступ), версионирование API без политики, пожизненная уникальность `employer_responses` vs лимит за период, `moderation.queue_items` без UNIQUE на активный target, идемпотентность консьюмера «по event_id» без dedup-стора, партиционирование `analytics.profile_events` без джоба управления + `DROP PARTITION` (неверный синтаксис, нужен `DETACH`+`DROP TABLE`), критерий готовности вехи 3 vs назначение `audit_log`.
 
 **Релевантные файлы фронта для сверки контрактов:** `web/lib/data.ts` (`Institution:191`, `Review:1184`, `Vacancy:1611`, `Applicant:1993`, `Application:2128`, `EmployerResponse:2112`, метрики `822-829`), `web/lib/app-state.tsx` (`ChildLink:21`, `RegisterInstitutionInput:31`), `web/app/(site)/search/page.tsx:56-116` (фильтры каталога), `web/lib/geo.ts` (клиентское определение координат).
