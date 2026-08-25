@@ -673,9 +673,26 @@ Web Push подписки (Push API + Service Worker, встроенный бр�
 | `created_at` | TIMESTAMPTZ | нет | `now()` | — |
 | `updated_at` | TIMESTAMPTZ | нет | `now()` | — |
 
-**Связи:** `UNIQUE(user_id)`; 1—N `communications.applications`, `communications.employer_responses`.
+**Связи:** `UNIQUE(user_id)`; 1—N `communications.applications`, `communications.employer_responses`, `communications.applicant_achievements`.
 **Индексы:** `UNIQUE(user_id)`; частичный `btree(visibility) WHERE visibility='public'` (публичный список `/applicants`).
 **Важно (PII):** контакты фильтруются на уровне SQL-проекции при `hide_contacts=true` и `visibility≠'public'`, не в DTO-маппинге после чтения (см. E5.5 в плане).
+
+### `communications.applicant_achievements`
+
+Достижения соискателя (`web/lib/data.ts:2002`, `Applicant.achievements`) — добавлено 2026-08-25. **Не переиспользует** полиморфную `catalog.achievements` (та в схеме `catalog`, `communications` не может писать в чужую таблицу — правило владения схемами); структура продублирована, тот же паттерн, что уже применён для `reviews.employer_review_metrics` отдельно от `reviews.review_metrics`.
+
+| Поле | Тип | Nullable | Default | Описание |
+|---|---|---|---|---|
+| `id` | UUID PK | нет | `gen_random_uuid()` | — |
+| `applicant_id` | UUID FK→`communications.applicants(id)` ON DELETE CASCADE | нет | — | — |
+| `title` | TEXT | нет | — | свободный текст (не `JSONB{ru,tg}` — пишет сам соискатель, тот же принцип что находка #11) |
+| `year` | INT | да | `NULL` | — |
+| `category` | TEXT | да | `NULL` | `gold`\|`silver`\|`bronze`\|`special` (CHECK), необязательно |
+| `description` | TEXT | да | `NULL` | — |
+| `created_at` | TIMESTAMPTZ | нет | `now()` | — |
+
+**Связи:** N—1 `communications.applicants` (внутри своей схемы — FK разрешён).
+**Индексы:** `btree(applicant_id)`.
 
 ### `communications.applications`
 
@@ -757,9 +774,9 @@ Web Push подписки (Push API + Service Worker, встроенный бр�
 | `catalog` | `institutions`, `institution_owners`, `institution_staff`, `achievements`, `institution_gallery`, `institution_alumni`, `news_articles`, `institution_metrics`, `institution_owner_verifications` | 9 |
 | `reviews` | `reviews`, `review_metrics`, `institution_rating_agg`, `outbox`, `employer_reviews`, `employer_review_metrics` | 6 |
 | `moderation` | `audit_log`, `queue_items` | 2 |
-| `communications` | `conversations`, `messages`, `notifications`, `push_subscriptions`, `vacancies`, `applicants`, `applications`, `employer_responses`, `visit_requests` | 9 |
+| `communications` | `conversations`, `messages`, `notifications`, `push_subscriptions`, `vacancies`, `applicants`, `applicant_achievements`, `applications`, `employer_responses`, `visit_requests` | 10 |
 | `analytics` | `profile_events`, `profile_events_daily` | 2 |
-| **Итого** | | **36** |
+| **Итого** | | **37** |
 
 ## Диаграмма связей (текстовая, ключевые FK)
 
