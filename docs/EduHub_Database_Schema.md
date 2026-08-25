@@ -203,7 +203,8 @@ SRS §7, сущность `Child` — минимальная привязка р
 | `discount_details` | TEXT | да | `NULL` | разовое текстовое поле |
 | `verified` | BOOL | нет | `false` | верификация владельца профиля (FR-34) — НЕ то же самое, что `moderation_status` |
 | `moderation_status` | TEXT | нет | `'pending'` | `pending`\|`approved`\|`rejected` (CHECK) — публикация в каталоге |
-| `plan` | TEXT | нет | `'free'` | `free`\|`pro`\|`enterprise` — влияет только на позицию в выдаче (FR-25), никогда на `rating_avg` |
+| `plan` | TEXT | нет | `'free'` | `free`\|`pro`\|`enterprise` — влияет только на бизнес-лимиты кабинета учреждения (см. `docs/EduHub_Pricing_Tiers.md`), никогда на поиск/сортировку/`rating_avg` (обновлено 2026-08-25 — буст позиции полностью убран как продуктовое решение) |
+| `plan_expires_at` | TIMESTAMPTZ | да | `NULL` | истечение тарифа автоматически возвращает лимиты на Free |
 | `founded` | INT | да | `NULL` | год основания |
 | `students_count` | INT | да | `NULL` | — |
 | `rating_avg` | NUMERIC(3,2) | да | `NULL` | денормализация — `NULL` означает «недостаточно отзывов» (FR-29), не «ноль»; пишет только `catalog` через порт `RatingSync`, источник расчёта — веха 4 |
