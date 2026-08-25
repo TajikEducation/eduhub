@@ -535,7 +535,7 @@ Transactional outbox — публикация отзыва пишет отзыв
 | `created_at` | TIMESTAMPTZ | нет | `now()` | — |
 
 **Связи:** нет FK на `target_id` (полиморфно, как `achievements`).
-**Индексы:** частичный `btree(priority DESC, created_at) WHERE status='pending'`; `btree(claimed_by, claimed_at) WHERE status='claimed'` (для таймаут-джоба возврата в пул).
+**Индексы:** частичный `btree(priority DESC, created_at) WHERE status='pending'`; `btree(claimed_by, claimed_at) WHERE status='claimed'` (для таймаут-джоба возврата в пул); частичный `UNIQUE(target_type, target_id) WHERE status <> 'resolved'` (добавлено 2026-08-25 — без него повторная постановка той же цели создавала второй айтем, два модератора могли claim'ить один `target_id` через два разных `queue_items.id`, обходя саму цель claim-паттерна; повторный флаг цели анти-спам детектором — `UPDATE` существующего pending-айтема, не `INSERT`).
 
 ---
 
