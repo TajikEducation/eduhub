@@ -749,7 +749,7 @@ Web Push подписки (Push API + Service Worker, встроенный бр�
 
 ### `analytics.profile_events`
 
-Сырые события просмотра/клика. Партиционирована по месяцам (`PARTITION BY RANGE(occurred_at)`) — retention 90 дней снимается через `DROP PARTITION`, не `DELETE`.
+Сырые события просмотра/клика. Партиционирована по месяцам (`PARTITION BY RANGE(occurred_at)`) — retention 90 дней снимается через `ALTER TABLE ... DETACH PARTITION` + `DROP TABLE` на отсоединённую партицию (исправлено 2026-08-25 — `DROP PARTITION` не существующий синтаксис PostgreSQL), не построчный `DELETE`. Новые партиции создаёт фоновый джоб заранее (`cmd/worker`, план E6.3.5) — без него вставка упадёт в момент перехода на новый месяц.
 
 | Поле | Тип | Nullable | Default | Описание |
 |---|---|---|---|---|
