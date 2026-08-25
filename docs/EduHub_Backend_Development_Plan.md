@@ -1,8 +1,8 @@
 # EduHub — план разработки бэкенда (v1)
 
-**Дата:** 2026-08-24
+**Дата:** 2026-08-24, ревизия 2026-08-25 (go-reviewer аудит — 10 критичных находок закрыты, см. Design decisions log)
 **Статус:** согласован (design approval gate пройден), готов к реализации
-**Авторы:** go-advisor (архитектурная консультация) + go-planner (детальный план) + согласование с пользователем
+**Авторы:** go-advisor (архитектурная консультация) + go-planner (детальный план) + go-reviewer (аудит) + согласование с пользователем
 
 Источники истины, использованные при планировании: `docs/EduHub_Technical_Specification.docx` (SRS v2.1), `docs/EduHub_Functional_Requirements.md` (FR детально, v1.1), `web/lib/data.ts` и `web/lib/app-state.tsx` (текущие контракты фронта, который бэкенд должен заменить).
 
@@ -23,7 +23,8 @@
 - Uptime ≥ 99.5% → zero-downtime миграции: UP+DOWN обязательны, `CREATE INDEX CONCURRENTLY`, `nullable → backfill → SET NOT NULL`, запрет `ADD COLUMN NOT NULL` без DEFAULT.
 - Mobile-first, PWA offline-кэш → ответы кэшируемые (ETag/`Cache-Control` на публичных GET).
 - Двуязычность ru/tg — архитектурно, с первого дня: JSONB `{ru,tg}`, симметрично `Bi` из `web/lib/data.ts:23`.
-- **Минимизация PII детей**: `auth.children` хранит только `age_group` + `status` + `institution_id`. Имя/фото ребёнка бэкенд не принимает, не хранит, не логирует — ломает текущий фронтовый `ChildLink.name`, правка фронта нужна отдельно (см. Risks).
+- **Минимизация PII детей**: `auth.children` хранит только `age_group` + `status` + `institution_id` (+ `confirmation_status` — см. ниже). Имя/фото ребёнка бэкенд не принимает, не хранит, не логирует — ломает текущий фронтовый `ChildLink.name`, правка фронта нужна отдельно (см. Risks).
+- **Право на удаление аккаунта (закон РТ №1537)**: soft-delete + анонимизация, не физический `DELETE` — см. `docs/EduHub_Database_Schema.md`, раздел `auth.users`.
 - Пароли — argon2id, TLS everywhere, OWASP Top 10, rate limiting на публичных эндпоинтах.
 - **Audit trail модерации вводится вместе с первым мутирующим эндпоинтом** (веха 3), не ретрофитом.
 - **Идемпотентность мутаций** там, где повтор опасен: регистрация, публикация отзыва, отклик на вакансию, обращение работодателя.
@@ -205,17 +206,17 @@ GREEN: in-memory token bucket по IP с TTL-очисткой. Коммента�
 Фильтры — 1:1 с реальным фронтом (`web/app/(site)/search/page.tsx:56-116`), плюс гео (`web/lib/geo.ts` уже умеет определять координаты клиентски).
 
 **17. Миграция 00002 — `catalog.institutions`**
-Поля: `id UUID PK DEFAULT gen_random_uuid()`, `name JSONB NOT NULL`, `types TEXT[] NOT NULL`, `region TEXT NOT NULL`, `city JSONB`, `district TEXT`, `geo GEOGRAPHY(Point,4326) NOT NULL`, `license_no TEXT`, `languages TEXT[]`, `program_level TEXT[]`, `curriculum TEXT[]`, `price INT`, транспорт/питание/скидки-поля, `verified BOOL NOT NULL DEFAULT false`, `moderation_status TEXT NOT NULL DEFAULT 'pending' CHECK (moderation_status IN ('pending','approved','rejected'))`, `plan TEXT NOT NULL DEFAULT 'free'`, `founded INT`, `students_count INT`, `rating_avg NUMERIC(3,2)`, `review_count INT NOT NULL DEFAULT 0` (денормализация — заполняется вехой 4 через порт `RatingSync`, но колонки нужны сразу — фильтр `min_rating` и `sort=score` обязаны работать одним SQL-запросом), `created_at/updated_at TIMESTAMPTZ NOT NULL DEFAULT now()`.
+Поля: `id UUID PK DEFAULT gen_random_uuid()`, `name JSONB NOT NULL`, `types TEXT[] NOT NULL`, `region TEXT NOT NULL`, `city JSONB`, `district TEXT`, `description JSONB`, `address JSONB`, `geo GEOGRAPHY(Point,4326) NOT NULL`, `license_no TEXT`, `languages TEXT[]`, `program_level TEXT[]`, `curriculum TEXT[]`, `price INT`, транспорт/питание/скидки-поля, `phone TEXT`, `email TEXT`, `website TEXT`, `socials JSONB`, `cover_photo_s3_key TEXT`, `age_range TEXT`, `tag JSONB` (полный список — см. `docs/EduHub_Database_Schema.md`, обновлено 2026-08-25 после аудита: изначальный список не покрывал контакты/описание, требуемые FR-06), `verified BOOL NOT NULL DEFAULT false`, `moderation_status TEXT NOT NULL DEFAULT 'pending' CHECK (moderation_status IN ('pending','approved','rejected'))`, `plan TEXT NOT NULL DEFAULT 'free'`, `founded INT`, `students_count INT`, `rating_avg NUMERIC(3,2)`, `review_count INT NOT NULL DEFAULT 0` (денормализация — заполняется вехой 4 через порт `RatingSync`, но колонки нужны сразу — фильтр `min_rating` и `sort=score` обязаны работать одним SQL-запросом), `created_at/updated_at TIMESTAMPTZ NOT NULL DEFAULT now()`.
 Приёмка: `make migrate-up` → OK; `\d catalog.institutions` показывает все колонки; `make migrate-down` откатывает чисто.
 
 **18. Миграция 00003 — индексы `CONCURRENTLY`**
-`-- +goose NO TRANSACTION`. `GIST(geo)`; `GIN(name jsonb_path_ops)`; `GIN((name->>'ru') gin_trgm_ops)` и аналогично `'tg'` (подстрочный поиск на обоих языках); `GIN(types)`; `btree(region, district)`; частичный `btree(rating_avg DESC, id) WHERE moderation_status='approved'`; `btree(price) WHERE moderation_status='approved'`.
+`-- +goose NO TRANSACTION`. `GIST(geo)`; `GIN(name jsonb_path_ops)`; `GIN((name->>'ru') gin_trgm_ops)` и аналогично `'tg'` (подстрочный поиск на обоих языках); `GIN(types)`; `GIN(curriculum)`; `GIN(program_level)`; `btree(region, district)`; частичный `btree(rating_avg DESC, id) WHERE moderation_status='approved'`; `btree(price) WHERE moderation_status='approved'`; частичный `UNIQUE(lower(name->>'ru'), region, district) WHERE moderation_status<>'rejected'` (не через `CONCURRENTLY` — уникальные constraint'ы создаются обычным `CREATE UNIQUE INDEX CONCURRENTLY` тоже допустимо вне транзакции, тот же `NO TRANSACTION` файл).
 Решение по поиску: `pg_trgm`, не `tsvector` — словаря для таджикского в Postgres нет, `to_tsvector('simple',...)` не даёт стемминга ни для одного языка, а фронт сейчас делает подстрочное совпадение (`.includes`) — trigram воспроизводит это поведение на обоих языках одинаково.
 Приёмка: `make migrate-up` без ошибок; `EXPLAIN` на гео-запросе показывает `Index Scan ... gist`.
 
 **19. Миграция 00004 — сателлитные таблицы каталога**
-`catalog.institution_staff`, `catalog.achievements` (полиморфно: `owner_type CHECK IN ('institution','staff','student')` + `owner_id UUID`, индекс `(owner_type, owner_id)`, без FK — полиморфные ссылки не поддерживают FK), `catalog.institution_gallery` (S3-ключ, не URL), `catalog.institution_alumni`, `catalog.news_articles`. Все — FK на `catalog.institutions(id) ON DELETE CASCADE` (внутри своей схемы FK разрешены свободно).
-Приёмка: `make migrate-up/down` чисто; 6 таблиц в схеме `catalog`.
+`catalog.institution_staff`, `catalog.achievements` (полиморфно: `owner_type CHECK IN ('institution','staff','student')` + `owner_id UUID`, индекс `(owner_type, owner_id)`, без FK — полиморфные ссылки не поддерживают FK), `catalog.institution_gallery` (S3-ключ, не URL), `catalog.institution_alumni`, `catalog.news_articles`, `catalog.institution_metrics` (пустая на этой вехе — заполняется портом `RatingSync` начиная с вехи 4, структура создаётся сразу вместе с остальным каталогом). Все — FK на `catalog.institutions(id) ON DELETE CASCADE` (внутри своей схемы FK разрешены свободно).
+Приёмка: `make migrate-up/down` чисто; 7 таблиц в схеме `catalog`.
 
 **20. `internal/catalog/domain` — сущности и `Filter`**
 RED: (а) `Filter{MinPrice:p(500),MaxPrice:p(100)}.Validate()` → ошибка поля `min_price`; (б) `Limit=0` после `Normalize()` → 20, `Limit=500` → капается на 50; (в) `Lat` без `Lng` → ошибка; (г) `RadiusKm` без координат → ошибка; (д) пустой `Filter` валиден. Конструктор `Institution` гарантирует `Gallery`/`Types` как `[]T{}`, не `nil`.
@@ -280,21 +281,23 @@ GREEN: декоратор `CachedService` поверх `Service`, ключ `cata
 
 ### ВЕХА 2 — Auth / RBAC (эпики)
 
-**E2.1 Схема `auth`.** `users` (`phone` уникальный нормализованный `+992XXXXXXXXX`, `email` nullable уникальный, `password_hash`, `role`, `status`, `failed_login_count`, `locked_until`), `refresh_tokens` (`token_hash`, `family_id`, `expires_at`, `revoked_at`, `replaced_by`), `children` (`user_id`, `institution_id` **FK на `catalog.institutions` ON DELETE RESTRICT** — см. Architecture, `age_group`, `status ∈ {current,alumnus,transferred}`, БЕЗ имени/фото).
+**E2.1 Схема `auth`.** `users` (`email` уникальный основной канал, `phone` nullable опциональный второй очереди, `password_hash` nullable — пусто для чисто-Google-аккаунтов, `role`, `status ∈ {unverified,active,banned,deleted}`, `email_verified_at`, `consent_at`+`consent_version`, `failed_login_count`, `locked_until`, `deleted_at`), `oauth_identities` (`provider='google'`, `provider_user_id`, UNIQUE пара), `verification_codes` (`channel`, `purpose`, `code_hash`, `attempts_count`, `expires_at`), `refresh_tokens` (`token_hash`, `family_id`, `expires_at`, `revoked_at`, `replaced_by`), `children` (`user_id`, `institution_id` **FK на `catalog.institutions` ON DELETE RESTRICT** — см. Architecture, `age_group`, `status ∈ {current,alumnus,transferred}`, `confirmation_status ∈ {pending,confirmed,rejected}` + `confirmed_by`/`confirmed_at`, БЕЗ имени/фото, `UNIQUE(user_id,institution_id)`).
 
-**E2.2 Хеширование и парольная политика.** argon2id, параметры в конфиге, PHC-формат хранения (параметры можно поднять без слома существующих хешей).
+**Приоритет каналов регистрации (пересмотрено 2026-08-25):** email/пароль + вход через Google — основные пути. Телефон — опциональное поле, SMS-верификация и связанный с ней rate-limit по номеру — вне MVP (SMS-провайдер в РТ платный за отправку, не оправдан на холодном старте). Отменяет исходную формулировку FR-40 (SRS v2.1, «телефон — основной канал»); `docs/EduHub_Functional_Requirements.md` синхронизирован в этой ревизии, SRS `.docx` — отложено по решению пользователя.
+
+**E2.2 Хеширование и парольная политика.** argon2id, параметры в конфиге, PHC-формат хранения (параметры можно поднять без слома существующих хешей). Google-only аккаунты (`password_hash IS NULL`) — вход только через `oauth_identities`, `/auth/login` для них возвращает `google_account_no_password`.
 
 **E2.3 JWT и ротация refresh.** Access 15 мин, refresh 30 дней, хранится только хеш. **Reuse detection**: предъявление уже использованного refresh отзывает всю `family_id` + запись в audit — с самого начала, не «потом». HS256 достаточен пока валидатор один (монолит); переход на RS256/JWKS — если появится второй потребитель токенов.
 
-**E2.4 Эндпоинты.** `POST /auth/register` (идемпотентен: повтор с тем же телефоном → 409 `phone_taken`, при `Idempotency-Key` — повтор исходного ответа), `POST /auth/login` (единое сообщение об ошибке для «нет юзера» и «неверный пароль» — anti-enumeration), `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me`.
+**E2.4 Эндпоинты.** `POST /auth/register` (email+пароль; идемпотентен через `platform.idempotency_keys` с nullable `user_id` и статусом `in_progress`/`completed` — см. схему; повтор с тем же email → 409 `email_taken`), `POST /auth/oauth/google` (обмен Google id-token → сессия, создаёт `users`+`oauth_identities` при первом входе), `POST /auth/verify` (код подтверждения email), `POST /auth/verify/resend` (rate-limit по email+IP), `POST /auth/password/reset-request`, `POST /auth/password/reset-confirm`, `POST /auth/login` (единое сообщение об ошибке для «нет юзера» и «неверный пароль» — anti-enumeration), `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me`, `POST /auth/consent` (фиксация `consent_at`+`consent_version` — обязательный шаг регистрации, не мелкий текст внизу формы), `DELETE /auth/me` (soft-delete + анонимизация — закон РТ №1537, см. схему `auth.users`).
 
 **E2.5 Middleware RBAC.** `RequireAuth` кладёт `auth.Principal{UserID,Role}` в контекст; аксессор `FromContext(ctx)(Principal,bool)` — обязательно с `ok`. `RequireRole(roles...)`. Табличный тест матрицы «роль × эндпоинт» — растёт в вехах 3-6.
 
-**E2.6 Children CRUD с PII-минимизацией.** API принимает только `institution_id`, `age_group`, `status`. Явный тест: поле `name` в запросе → 400 `unknown field`. Проверка существования+approved-статуса институции — теперь просто обычный FK-constraint (упрощено по решению из Architecture — не нужен отдельный порт `catalog.InstitutionExists`, БД сама гарантирует).
+**E2.6 Children CRUD с PII-минимизацией и подтверждением учреждением.** API принимает только `institution_id`, `age_group`, `status`. Явный тест: поле `name` в запросе → 400 `unknown field`. **Проверка статуса институции — НЕ FK, а явный guard в usecase**: FK на `catalog.institutions` гарантирует только существование строки (ссылочную целостность), не значение `moderation_status` — привязка к `pending`/`rejected` учреждению технически пройдёт FK, поэтому usecase обязан отдельно проверить `moderation_status='approved'` через порт `catalog.InstitutionStatus` до вставки. Новое: привязка создаётся со `confirmation_status='pending'`; отдельный эндпоинт в кабинете учреждения — `GET /institutions/{id}/children/pending` (роль `institution`, свой институт) + `POST /children/{id}/confirm|reject` (структурированная причина при reject, запись в `moderation.audit_log`). Право на отзыв (веха 4, E4.2) требует `confirmed`, не просто существования строки.
 
-**E2.7 Anti-bruteforce.** Rate limit на `/auth/login` по телефону и IP, экспоненциальная задержка, блокировка на 15 мин после N попыток; события в audit без пароля и с маскированным телефоном (`+992 *** ** 12`).
+**E2.7 Anti-bruteforce.** Rate limit на `/auth/login` по email и IP, экспоненциальная задержка, блокировка на 15 мин после N попыток; события в audit без пароля, email маскируется в логах (например `a***@example.com`).
 
-**Критерии готовности:** матричный тест ролей зелёный; тест reuse-detection refresh-токена зелёный; ни один тест не пишет PII в лог (grep-проверка тестового вывода); `-race` чистый.
+**Критерии готовности:** матричный тест ролей зелёный; тест reuse-detection refresh-токена зелёный; тест «FK не заменяет проверку approved-статуса» (привязка к `pending`-институции должна быть отклонена usecase, не только полагаться на FK); ни один тест не пишет PII в лог (grep-проверка тестового вывода); `-race` чистый.
 
 ---
 
@@ -302,9 +305,9 @@ GREEN: декоратор `CachedService` поверх `Service`, ключ `cata
 
 **E3.1 Пакет `internal/moderation`.** Схема `moderation.audit_log` (`actor_id`, `actor_role`, `action`, `target_type`, `target_id`, `reason`, `payload_diff JSONB`, `request_id`, `created_at`). Порт `moderation.Recorder.Record(ctx, tx, Entry) error` — принимает транзакцию (запись audit физически невозможна вне транзакции изменения). Здесь же — очередь модерации с claim-паттерном (`claimed_by`, `claimed_at`, `priority`, `flagged_reason`) — см. раздел «Модерация — детальный дизайн» выше.
 
-**E3.2 Пакет `internal/platform/idempotency`.** `platform.idempotency_keys` (`key`,`user_id`,`endpoint`,`request_hash`,`response_status`,`response_body`,`created_at`, UNIQUE(`key`,`user_id`,`endpoint`)). Тот же ключ+тело → сохранённый ответ; тот же ключ+другое тело → 422 `idempotency_key_reuse`. TTL 24ч. Переиспользуется в вехах 4-5.
+**E3.2 Пакет `internal/platform/idempotency`.** `platform.idempotency_keys` (`key`,`endpoint`,`user_id` nullable,`request_hash`,`status ∈ {in_progress,completed}`,`response_status`,`response_body`,`created_at`, UNIQUE(`key`,`endpoint`)). Строка вставляется со статусом `in_progress` ДО выполнения операции — атомарный INSERT работает как распределённая блокировка против гонки параллельных повторов (два одновременных ретрая не оба проходят проверку). Тот же ключ+тело, статус `completed` → сохранённый ответ; тот же ключ+другое тело → 422 `idempotency_key_reuse`; тот же ключ, статус всё ещё `in_progress` → 409 (уже обрабатывается). TTL 24ч. `user_id` nullable — нужен для анонимных мутирующих эндпоинтов (`/auth/register`). Переиспользуется в вехах 4-5.
 
-**E3.3 Регистрация институции.** `POST /api/v1/institutions` (роль `user`/`institution`), `moderation_status='pending'`, владелец в `catalog.institution_owners`. Идемпотентно. Форма — минимум из `RegisterInstitutionInput` (`web/lib/app-state.tsx:31+`), остальное — дефолты.
+**E3.3 Регистрация институции.** `POST /api/v1/institutions` (роль `user`/`institution`), `moderation_status='pending'`, владелец в `catalog.institution_owners`. Идемпотентность — два независимых механизма: (1) `Idempotency-Key` защищает от повтора одного и того же HTTP-запроса (сетевой ретрай); (2) частичный `UNIQUE(lower(name->>'ru'), region, district) WHERE moderation_status<>'rejected'` в схеме защищает от осознанного двойного сабмита формы без заголовка (дубль-клик) — конфликт возвращает `institution_already_registered`. Форма — минимум из `RegisterInstitutionInput` (`web/lib/app-state.tsx:31+`), остальное — дефолты.
 
 **E3.4 Редактирование профиля.** `PATCH /api/v1/institutions/{id}` — владелец или модератор. Оптимистическая блокировка (`version INT` / `If-Match`) — конкурентная правка → 409, не «последний победил». Частичное обновление: `nil` = не трогать, явный JSON `null` = очистить (нужен custom-unmarshal, отдельная задача при реализации).
 
@@ -323,13 +326,13 @@ GREEN: декоратор `CachedService` поверх `Service`, ключ `cata
 **E4.1 Схема `reviews`.** `reviews` (UNIQUE(`user_id`,`institution_id`,`child_id`) — идемпотентность на уровне БД), `review_metrics` (нормализовано по строкам: `review_id`,`metric_key`,`score 1-5`, UNIQUE(`review_id`,`metric_key`)), `institution_rating_agg` (`institution_id`,`metric_key`,`weighted_avg`,`review_count`,`updated_at`).
 **8 метрик** (решено ранее в разговоре — по `docs/EduHub_Functional_Requirements.md` v1.1, уточнённая версия; девятая величина в SRS/бизнес-плане — вычисляемое среднее, не отдельная оцениваемая метрика): `quality, conditions, safety, food, transport, price, parent_involvement, inclusivity`.
 
-**E4.2 Eligibility (верификация отзыва).** Разрешено только при наличии `auth.children` со связью user→institution в статусе `current`/`alumnus`/`transferred`. Проверка — в usecase через порт `auth.ChildLinkExists` (кросс-схемная логика — не через FK, поскольку `reviews` не владеет схемой `auth`, порт остаётся правильным паттерном в этом направлении, в отличие от `children→institutions`).
+**E4.2 Eligibility (верификация отзыва).** Разрешено только при наличии `auth.children` со связью user→institution в статусе `current`/`alumnus`/`transferred` **И `confirmation_status='confirmed'`** (учреждение подтвердило привязку — см. E2.6, добавлено 2026-08-25: самодекларации родителя одной больше недостаточно, это вторая линия защиты сверх `UNIQUE(user_id,institution_id)`). Проверка — в usecase через порт `auth.ChildLinkExists` (кросс-схемная логика — не через FK, поскольку `reviews` не владеет схемой `auth`, порт остаётся правильным паттерном в этом направлении, в отличие от `children→institutions`).
 
 **E4.3 Recency decay.** `w_i = 0.5 ^ (age_days / H)`, `H=365` дней (конфиг, не хардкод). `weighted_avg = Σ(w_i·score_i) / Σ(w_i)` по метрике. Порог публикации: `review_count >= MIN_REVIEWS` (старт 5), иначе `rating: null` + `rating_status: "insufficient"`. Два триггера пересчёта: (1) точечный по событию «отзыв одобрен/отклонён», (2) обязательный ночной полный пересчёт (веса меняются от одного лишь течения времени).
 
 **E4.4 Outbox + релей.** `reviews.outbox` (`id`,`topic`,`payload`,`created_at`,`published_at`). Публикация отзыва = {отзыв+метрики+outbox-запись} в одной транзакции. Релей — `FOR UPDATE SKIP LOCKED` батчами → Redis Stream → консьюмер идемпотентен по `event_id`.
 
-**E4.5 Синхронизация с каталогом.** Консьюмер вызывает порт `catalog.RatingSync.Apply(ctx, instID, avg, count)` — `catalog` сам пишет в свои колонки, бампает cache version. Владение схемами соблюдено.
+**E4.5 Синхронизация с каталогом.** Консьюмер вызывает порт `catalog.RatingSync.Apply(ctx, instID, metrics []MetricScore)` — **передаёт массив всех 8 метрик**, не только общее среднее (исправлено 2026-08-25: карточка учреждения рендерит разбивку по 8 метрикам, одного `avg` недостаточно для собственного одного-запросного чтения карточки; `catalog` не вправе читать схему `reviews` напрямую). `catalog` сам пишет в свои денормализованные колонки — `catalog.institutions.rating_avg`/`review_count` (общее) + `catalog.institution_metrics` (по каждой из 8 метрик, новая сателлит-таблица) — бампает cache version. Владение схемами соблюдено.
 
 **E4.6 Фоновые задачи и лидерство.** Ночной пересчёт и чистка idempotency-ключей — в `cmd/worker`, лидер через `pg_try_advisory_lock` — безопасно на нескольких инстансах без внешнего оркестратора.
 
@@ -343,9 +346,9 @@ GREEN: декоратор `CachedService` поверх `Service`, ключ `cata
 
 ### ВЕХА 5 — Communications
 
-**E5.1 Схема `communications`.** 6 таблиц; `applications` UNIQUE(`applicant_id`,`vacancy_id`), `employer_responses` UNIQUE(`institution_id`,`applicant_id`) — идемпотентность на уровне БД (фронт уже полагается на это, `web/lib/data.ts:2126-2127`).
+**E5.1 Схема `communications`.** 8 таблиц (обновлено 2026-08-25 — было 6): `conversations` (один диалог на пару user/institution, `id` = `chat:conv:{id}`, раздельные `user_last_read_at`/`institution_last_read_at`) + `messages` (переструктурировано: `conversation_id FK`, `sender_type ∈ {user,institution}`, `sender_id` — раньше `messages` смешивала обе стороны в одной строке без различения отправителя, что делало чат нереализуемым); `notifications`; `vacancies`; `applicants`; `applications` UNIQUE(`applicant_id`,`vacancy_id`); `employer_responses` UNIQUE(`institution_id`,`applicant_id`) — идемпотентность на уровне БД (фронт уже полагается на это, `web/lib/data.ts:2126-2127`); `visit_requests` (новое — уже есть форма на фронте, `web/app/(site)/institutions/[id]/page.tsx:344-352`, но не было ни таблицы, ни эндпоинта; идемпотентно через частичный `UNIQUE(institution_id,phone) WHERE status='new'`, обязателен rate-limit по IP+телефону — публичный эндпоинт для гостя собирает PII).
 
-**E5.2 WebSocket-хаб и мультиинстансность.** Соединения в памяти инстанса; кросс-инстансная доставка — Redis Pub/Sub (`chat:conv:{id}`). Сообщение сначала пишется в Postgres (источник истины), затем публикуется. Клиент дедуплицирует по `message_id`, история — REST-запросом, WS только за «живую» доставку. N инстансов без sticky-сессий.
+**E5.2 WebSocket-хаб и мультиинстансность.** Соединения в памяти инстанса; кросс-инстансная доставка — Redis Pub/Sub (`chat:conv:{id}`, теперь backed реальной сущностью `communications.conversations.id`, не суррогатной парой). Сообщение сначала пишется в Postgres (источник истины), затем публикуется. Клиент дедуплицирует по `message_id` (= `messages.id`), история — REST-запросом, WS только за «живую» доставку. N инстансов без sticky-сессий. Rate-limit на отправку сообщения — по `sender_id`, защита от спама в чат.
 Профилактика утечек: 2 горутины на соединение (reader/writer), снимаются по общему `CancelFunc`; `SetReadDeadline`+ping/pong 30с; исходящий канал с буфером 64, при переполнении — закрытие соединения, не блокировка хаба. Тесты — `-race` + тест возврата `NumGoroutine()` к базовому после закрытия 100 соединений.
 Безопасность: токен — в `Sec-WebSocket-Protocol`, не в query (query попадает в логи прокси).
 
@@ -452,5 +455,23 @@ GREEN: декоратор `CachedService` поверх `Service`, ключ `cata
 | 7 | Отказ в регистрации учреждения — без формального пути апелляции | Пользователь выбрал MVP-вариант |
 | 8 | Очередь модерации — одна общая, без деления по региону | Пользователь выбрал MVP-вариант |
 | 9 | Claim-паттерн, структурированная причина отказа, приоритет по флагам, уведомление актора, self-moderation guard | Приняты как общие практики по умолчанию, не оспорены |
+
+### Ревизия 2026-08-25 (go-reviewer аудит, вердикт REQUEST_CHANGES — 10 критичных находок, все закрыты)
+
+| # | Находка | Решение |
+|---|---|---|
+| 10 | `catalog.institutions` без контактов/описания/адреса/обложки (FR-06 не покрыт) | Добавлены `description`/`address`/`phone`/`email`/`website`/`socials`/`cover_photo_s3_key`/`age_range`/`tag` |
+| 11 | 8 метрик рейтинга негде взять при чтении карточки (`catalog` не вправе читать схему `reviews`) | `RatingSync.Apply` расширен до массива метрик + новая таблица `catalog.institution_metrics` |
+| 12 | `auth.children` без UNIQUE — обходит единственную защиту от накрутки (FR-15/18) | `UNIQUE(user_id, institution_id)` |
+| 13 | Ложное утверждение в плане «FK гарантирует approved-статус» (E2.6) | Формулировка исправлена: FK — ссылочная целостность, guard `moderation_status='approved'` — явный код в usecase |
+| 14 | Родитель может привязать ребёнка к нескольким учреждениям с разными статусами; учреждение должно подтверждать привязку | Явно задокументировано (мульти-институция уже поддержана `UNIQUE` на пару, не на пользователя); добавлены `confirmation_status`/`confirmed_by`/`confirmed_at` на `auth.children`, подтверждение по личности родителя (не ребёнка), новый эндпоинт в кабинете учреждения, eligibility отзыва (E4.2) требует `confirmed` |
+| 15 | `communications.messages` без отправителя и conversation — чат нереализуем | Новая `communications.conversations` + `messages.sender_type`/`sender_id` + раздельные `*_last_read_at` |
+| 16 | FR-40 реализован частично: нет подтверждения email/согласия на ПД/сброса пароля; SMS дорогой для MVP | Флип приоритета: email/Google — основные каналы, телефон — опционален вне MVP; добавлены `auth.oauth_identities`, `auth.verification_codes`, `consent_at`/`consent_version`; `docs/EduHub_Functional_Requirements.md` синхронизирован (FR-40), SRS `.docx` — отложено |
+| 17 | Нет механизма удаления аккаунта (закон РТ №1537) | Soft-delete + анонимизация вместо физического `DELETE` (`auth.users.status='deleted'`, затирание PII, отдельные фоновые задачи анонимизации по схемам-владельцам) |
+| 18 | `Idempotency-Key` на `/auth/register` физически невозможен (`user_id NOT NULL`); гонка параллельных повторов не закрыта | `platform.idempotency_keys.user_id` → nullable; добавлен `status ∈ {in_progress,completed}`, INSERT как атомарная блокировка |
+| 19 | Регистрация учреждения "идемпотентна" без соответствующего UNIQUE в схеме | Частичный `UNIQUE(lower(name->>'ru'), region, district) WHERE moderation_status<>'rejected'` на `catalog.institutions` |
+| 20 | «Заявка на визит» есть на фронте, нет в схеме/плане | Новая `communications.visit_requests` (веха 5), идемпотентно + rate-limit |
+
+**Отложено пользователем на отдельный проход** (не критичные находки go-reviewer — FR-21/24 реферальная система и аналитика МОН, буст тарифа FR-25 vs keyset-пагинация, недоукомплектованность FR-35 спора, хранилище материалов FR-34, presigned-загрузка без серверного сжатия, источник перехода в аналитике, push-уведомления, отсутствующие фасеты/индексы вехи 1, покрытие rate-limiting, конфликт `version`/ETag, двуязычный JSONB для пользовательского текста, отсутствие имени/локали у `auth.users`, достижения соискателя, поздняя наблюдаемость, отсутствие Dockerfile, ограниченная перф-стратегия, лимиты чата, версионирование API, пожизненная уникальность `employer_responses` — полный список см. в результате аудита go-reviewer от 2026-08-25).
 
 **Релевантные файлы фронта для сверки контрактов:** `web/lib/data.ts` (`Institution:191`, `Review:1184`, `Vacancy:1611`, `Applicant:1993`, `Application:2128`, `EmployerResponse:2112`, метрики `822-829`), `web/lib/app-state.tsx` (`ChildLink:21`, `RegisterInstitutionInput:31`), `web/app/(site)/search/page.tsx:56-116` (фильтры каталога), `web/lib/geo.ts` (клиентское определение координат).
