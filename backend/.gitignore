@@ -1,9 +1,9 @@
-# Environment
+# Окружение
 .env
 .env.*
 !.env.example
 
-# Build output
+# Результат сборки
 bin/
 /api
 /devseed
@@ -15,10 +15,10 @@ bin/
 *.test
 *.out
 
-# Dependency vendoring (only if ever vendored)
+# Вендоринг зависимостей (только если когда-либо будет использован)
 vendor/
 
-# Coverage
+# Покрытие тестами
 coverage.html
 coverage.txt
 coverage.out

@@ -1,4 +1,4 @@
--- Runs once on first container start (docker-entrypoint-initdb.d).
--- Creates a separate database for integration tests (`make test-integration`),
--- kept apart from the dev database `eduhub` so tests never touch dev data.
+-- Выполняется один раз при первом старте контейнера (docker-entrypoint-initdb.d).
+-- Создаёт отдельную БД для интеграционных тестов (`make test-integration`),
+-- отдельно от dev-базы `eduhub`, чтобы тесты никогда не трогали dev-данные.
 CREATE DATABASE eduhub_test;

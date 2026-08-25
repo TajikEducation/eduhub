@@ -1,6 +1,7 @@
 services:
-  # PostgreSQL + PostGIS. Host port 5433 to avoid clashing with a locally
-  # installed PostgreSQL (default 5432). Matches DATABASE_URL in .env.example.
+  # PostgreSQL + PostGIS. Порт на хосте 5433, чтобы не конфликтовать с
+  # локально установленным PostgreSQL (порт по умолчанию 5432). Совпадает
+  # с DATABASE_URL в .env.example.
   db:
     image: postgis/postgis:16-3.4
     ports:
@@ -18,8 +19,8 @@ services:
       timeout: 5s
       retries: 10
 
-  # Redis. Host port 6380 — 6379 is already occupied by another local
-  # project's container on this machine; remap to avoid a port clash.
+  # Redis. Порт на хосте 6380 — 6379 уже занят контейнером другого
+  # локального проекта на этой машине; перемаплен во избежание конфликта.
   redis:
     image: redis:7-alpine
     ports:
@@ -32,8 +33,8 @@ services:
       timeout: 5s
       retries: 10
 
-  # MinIO — S3-compatible object storage for dev/test only. Production uses
-  # a real S3-compatible provider configured separately (see .env.example).
+  # MinIO — S3-совместимое хранилище только для dev/test. В проде —
+  # реальный S3-совместимый провайдер, настраивается отдельно (см. .env.example).
   minio:
     image: minio/minio
     command: server /data --console-address ":9001"

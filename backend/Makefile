@@ -1,41 +1,41 @@
 .PHONY: run test test-race test-integration lint vet vuln migrate-up migrate-down seed
 
-# Start the API server locally.
+# Запустить API-сервер локально.
 run:
 	go run ./cmd/api
 
-# Run unit tests across all packages.
+# Прогнать unit-тесты по всем пакетам.
 test:
 	go test ./...
 
-# Run unit tests with the race detector enabled.
+# Прогнать unit-тесты с включённым race detector.
 test-race:
 	go test -race ./...
 
-# Run integration tests (require docker-compose services running, see docker-compose.yml).
+# Прогнать интеграционные тесты (нужны запущенные сервисы docker-compose, см. docker-compose.yml).
 test-integration:
 	go test -tags=integration ./...
 
-# Run golangci-lint using the repo config (.golangci.yml).
+# Прогнать golangci-lint по конфигу репозитория (.golangci.yml).
 lint:
 	golangci-lint run
 
-# Run go vet across all packages.
+# Прогнать go vet по всем пакетам.
 vet:
 	go vet ./...
 
-# Check dependencies for known vulnerabilities.
+# Проверить зависимости на известные уязвимости.
 vuln:
 	govulncheck ./...
 
-# Apply all pending database migrations.
+# Применить все непроведённые миграции БД.
 migrate-up:
 	goose -dir migrations postgres "$$DATABASE_URL" up
 
-# Roll back the most recent database migration.
+# Откатить последнюю миграцию БД.
 migrate-down:
 	goose -dir migrations postgres "$$DATABASE_URL" down
 
-# Seed demo data (dev/test only, see cmd/devseed).
+# Засеять демо-данные (только dev/test, см. cmd/devseed).
 seed:
 	go run ./cmd/devseed
