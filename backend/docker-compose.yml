@@ -1,0 +1,57 @@
+services:
+  # PostgreSQL + PostGIS. Host port 5433 to avoid clashing with a locally
+  # installed PostgreSQL (default 5432). Matches DATABASE_URL in .env.example.
+  db:
+    image: postgis/postgis:16-3.4
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: eduhub
+      POSTGRES_PASSWORD: eduhub
+      POSTGRES_DB: eduhub
+    volumes:
+      - eduhub-pgdata:/var/lib/postgresql/data
+      - ./scripts/init-test-db.sql:/docker-entrypoint-initdb.d/init-test-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eduhub -d eduhub"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Redis. Host port 6380 — 6379 is already occupied by another local
+  # project's container on this machine; remap to avoid a port clash.
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    volumes:
+      - eduhub-redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # MinIO — S3-compatible object storage for dev/test only. Production uses
+  # a real S3-compatible provider configured separately (see .env.example).
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: eduhub
+      MINIO_ROOT_PASSWORD: eduhub12345
+    volumes:
+      - eduhub-miniodata:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  eduhub-pgdata:
+  eduhub-redisdata:
+  eduhub-miniodata:
