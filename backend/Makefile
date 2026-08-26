@@ -30,11 +30,11 @@ vuln:
 
 # Применить все непроведённые миграции БД.
 migrate-up:
-	goose -dir migrations postgres "$$DATABASE_URL" up
+	go tool goose -dir migrations postgres "$$DATABASE_URL" up
 
 # Откатить последнюю миграцию БД.
 migrate-down:
-	goose -dir migrations postgres "$$DATABASE_URL" down
+	go tool goose -dir migrations postgres "$$DATABASE_URL" down
 
 # Засеять демо-данные (только dev/test, см. cmd/devseed).
 seed:
