@@ -1,0 +1,22 @@
+.git/
+.claude/
+*.md
+.env
+.env.*
+!.env.example
+
+# Результат сборки / артефакты
+bin/
+/api
+/devseed
+/worker
+*.test
+*.out
+coverage.html
+coverage.txt
+coverage.out
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store

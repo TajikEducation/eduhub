@@ -1,0 +1,27 @@
+# Конфиг golangci-lint v2 (схема v2, отличается от v1: обязателен "version",
+# форматтеры (gofmt/goimports) вынесены в отдельную секцию "formatters").
+version: "2"
+
+linters:
+  # По умолчанию включён небольшой набор (errcheck, govet, ineffassign, staticcheck, unused) —
+  # переопределяем список явно набором из плана вехи 0.
+  default: none
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - nilerr
+    - nilnil
+    - bodyclose
+    - rowserrcheck
+    - contextcheck
+    - exhaustive
+    - gosec
+    - noctx
+  exclusions:
+    generated: lax
+
+formatters:
+  enable:
+    - gofmt
+    - goimports

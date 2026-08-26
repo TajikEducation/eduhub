@@ -26,7 +26,7 @@ func TestLoad_AllVarsSet(t *testing.T) {
 	if cfg.HTTPAddr != ":9090" {
 		t.Errorf("HTTPAddr = %q, want %q", cfg.HTTPAddr, ":9090")
 	}
-	if cfg.DatabaseURL != "postgres://eduhub:eduhub@localhost:5433/eduhub?sslmode=disable" {
+	if cfg.DatabaseURL != "postgres://eduhub:eduhub@localhost:5433/eduhub?sslmode=disable" { //nolint:gosec // тестовый DSN локального dev-контейнера, не секрет
 		t.Errorf("DatabaseURL = %q, unexpected", cfg.DatabaseURL)
 	}
 	if cfg.LogLevel != "debug" {

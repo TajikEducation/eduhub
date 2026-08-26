@@ -11,7 +11,7 @@ import (
 func Recover(logger *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			defer func() {
+			defer func() { //nolint:contextcheck // замыкание использует r.Context() из внешней области, новый контекст не создаёт
 				if rec := recover(); rec != nil {
 					logger.Error("panic recovered",
 						slog.Any("panic", rec),

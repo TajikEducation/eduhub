@@ -29,3 +29,47 @@ jobs:
       - run: npx tsc --noEmit
 
       - run: npm run build
+
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: eduhub
+          POSTGRES_PASSWORD: eduhub
+          POSTGRES_DB: eduhub_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U eduhub -d eduhub_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+          cache-dependency-path: backend/go.sum
+
+      - run: go vet ./...
+
+      - uses: golangci/golangci-lint-action@v6
+        with:
+          version: v2.9.0
+          working-directory: backend
+
+      - run: go test -race ./...
+
+      - run: go test -tags=integration ./...
+        env:
+          TEST_DATABASE_URL: postgres://eduhub:eduhub@localhost:5432/eduhub_test?sslmode=disable
+
+      - run: go tool govulncheck ./...
+
+      - run: docker build -t eduhub-api .

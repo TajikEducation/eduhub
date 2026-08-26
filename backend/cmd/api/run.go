@@ -38,7 +38,8 @@ type Deps struct {
 // run поднимает HTTP-сервер на deps.Handler и блокируется до отмены ctx, затем делает
 // graceful shutdown в пределах cfg.ShutdownTimeout и закрывает deps.Pool.
 func run(ctx context.Context, cfg config.Config, deps Deps) error {
-	ln, err := net.Listen("tcp", cfg.HTTPAddr)
+	var lc net.ListenConfig
+	ln, err := lc.Listen(ctx, "tcp", cfg.HTTPAddr)
 	if err != nil {
 		return fmt.Errorf("listen: %w", err)
 	}
@@ -66,9 +67,12 @@ func run(ctx context.Context, cfg config.Config, deps Deps) error {
 	case <-ctx.Done():
 	}
 
+	// context.Background(), не ctx: на этой строке ctx уже отменён (мы вышли из select
+	// по <-ctx.Done()) — shutdown должен получить свежий контекст с собственным таймаутом.
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 	defer cancel()
 
+	//nolint:contextcheck // ctx уже отменён (мы здесь именно потому, что сработал ctx.Done()), shutdown должен получить собственный свежий контекст с ShutdownTimeout, а не наследовать уже мёртвый
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		return fmt.Errorf("shutdown: %w", err)
 	}

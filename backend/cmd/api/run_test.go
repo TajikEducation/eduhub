@@ -54,11 +54,19 @@ func TestRun_ServesHealthzOnEphemeralPort(t *testing.T) {
 		t.Fatal("timed out waiting for server address")
 	}
 
-	resp, err := http.Get("http://" + addr + "/healthz")
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://"+addr+"/healthz", nil)
+	if err != nil {
+		t.Fatalf("NewRequestWithContext: %v", err)
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatalf("GET /healthz: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			t.Errorf("resp.Body.Close: %v", closeErr)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusOK)
@@ -116,12 +124,21 @@ func TestRun_GracefulShutdownWaitsForInFlightRequest(t *testing.T) {
 	statusCh := make(chan int, 1)
 	getErrCh := make(chan error, 1)
 	go func() {
-		resp, err := http.Get("http://" + addr + "/slow")
+		req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://"+addr+"/slow", nil)
 		if err != nil {
 			getErrCh <- err
 			return
 		}
-		defer resp.Body.Close()
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			getErrCh <- err
+			return
+		}
+		defer func() {
+			if closeErr := resp.Body.Close(); closeErr != nil {
+				getErrCh <- closeErr
+			}
+		}()
 		statusCh <- resp.StatusCode
 		getErrCh <- nil
 	}()
