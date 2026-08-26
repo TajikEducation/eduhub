@@ -1,6 +1,4 @@
-// Package config загружает конфигурацию бэкенда EduHub из переменных
-// окружения. Не зависит от транспорта (net/http) или драйверов БД (pgx) —
-// чистый платформенный строительный блок.
+// Package config загружает конфигурацию бэкенда EduHub из переменных окружения.
 package config
 
 import (
@@ -14,8 +12,7 @@ const (
 	defaultShutdownTimeout = 10 * time.Second
 )
 
-// Config хранит конфигурацию бэкенда EduHub, читается из переменных
-// окружения (см. backend/.env.example).
+// Config — конфигурация бэкенда.
 type Config struct {
 	AppEnv          string
 	HTTPAddr        string
@@ -24,8 +21,7 @@ type Config struct {
 	ShutdownTimeout time.Duration
 }
 
-// Load читает конфигурацию из переменных окружения. Возвращает ошибку,
-// если обязательная переменная отсутствует или не удалось её распарсить.
+// Load читает конфигурацию из ENV, возвращает ошибку при отсутствии обязательной переменной.
 func Load() (Config, error) {
 	cfg := Config{
 		AppEnv:      os.Getenv("APP_ENV"),
