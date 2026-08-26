@@ -40,6 +40,15 @@ func (e *Error) Error() string {
 	return e.category.Error() + ": " + e.message
 }
 
+// Message — текст без дублирования префикса категории (в отличие от Error()),
+// для показа клиенту в httpx.WriteError; пустой message заменяется текстом категории.
+func (e *Error) Message() string {
+	if e.message == "" {
+		return e.category.Error()
+	}
+	return e.message
+}
+
 // Is матчит *Error с sentinel-категорией для errors.Is.
 func (e *Error) Is(target error) bool {
 	return e.category == target

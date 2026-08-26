@@ -124,3 +124,37 @@ func TestError_MessageNotEmpty(t *testing.T) {
 		t.Fatal("Error() returned empty string")
 	}
 }
+
+// TestMessage_ReturnsMessageWithoutCategoryPrefix — RED-кейс: Message()
+// возвращает только текст сообщения, без дублирования префикса категории,
+// который Error() добавляет для errors.Is-совместимого текста.
+func TestMessage_ReturnsMessageWithoutCategoryPrefix(t *testing.T) {
+	err := apperr.NotFound("institution", "42")
+
+	var target *apperr.Error
+	if !errors.As(err, &target) {
+		t.Fatalf("errors.As(err, &target) = false, want true; err=%v", err)
+	}
+
+	want := "institution not found: id=42"
+	if got := target.Message(); got != want {
+		t.Errorf("Message() = %q, want %q", got, want)
+	}
+}
+
+// TestMessage_FallsBackToCategoryWhenEmpty — RED-кейс: если message
+// пустой (например, Unauthorized("") — вызывающий не указал деталей),
+// Message() возвращает текст категории, а не пустую строку.
+func TestMessage_FallsBackToCategoryWhenEmpty(t *testing.T) {
+	err := apperr.Unauthorized("")
+
+	var target *apperr.Error
+	if !errors.As(err, &target) {
+		t.Fatalf("errors.As(err, &target) = false, want true; err=%v", err)
+	}
+
+	want := apperr.ErrUnauthorized.Error()
+	if got := target.Message(); got != want {
+		t.Errorf("Message() = %q, want %q", got, want)
+	}
+}
