@@ -23,8 +23,17 @@ claude-talk-to-figma-mcp/
 skills-lock.json
 .mcp.json
 
-# graphify knowledge-graph cache (regenerable, local only)
-graphify-out/
+# graphify knowledge-graph (repo root only) — cache/converted/counters are regenerable
+# scratch state, ignored; the graph itself and the wiki are committed as project docs.
+/graphify-out/*
+!/graphify-out/graph.json
+!/graphify-out/graph.html
+!/graphify-out/GRAPH_REPORT.md
+!/graphify-out/wiki/
+!/graphify-out/wiki/**
+
+# stray graphify-out dirs elsewhere (e.g. old web/-scoped runs) — always fully ignored
+web/graphify-out/
 
 # Node / build (frontend)
 node_modules/
