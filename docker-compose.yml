@@ -1,0 +1,7 @@
+# Единая точка входа для локального full-stack запуска (hot-reload):
+#   docker compose up --build
+# Поднимает: db, redis, minio, migrate (разово), api, web — в одной сети/проекте.
+# Требует Docker Compose v2.20+ (директива include).
+include:
+  - backend/docker-compose.yml
+  - web/docker-compose.yml

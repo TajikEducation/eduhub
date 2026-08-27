@@ -42,7 +42,7 @@ func main() {
 	router.Handle("GET /healthz", httpx.Healthz(log))
 	router.Handle("GET /readyz", httpx.Readyz(log, readyzTimeout, httpx.Dependency{Name: "db", Ping: pool.Ping}))
 
-	handler := httpx.Chain(httpx.WithRequestID, httpx.AccessLog(log), httpx.Recover(log))(router)
+	handler := httpx.Chain(httpx.WithRequestID, httpx.AccessLog(log), httpx.CORS(cfg.CORSAllowedOrigins), httpx.Recover(log))(router)
 
 	deps := Deps{Logger: log, Pool: pool, Handler: handler}
 	if err := run(ctx, cfg, deps); err != nil {

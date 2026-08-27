@@ -1,6 +1,7 @@
 package config_test
 
 import (
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -64,5 +65,39 @@ func TestLoad_DefaultHTTPAddr(t *testing.T) {
 	}
 	if cfg.HTTPAddr != ":8080" {
 		t.Errorf("HTTPAddr = %q, want default %q", cfg.HTTPAddr, ":8080")
+	}
+}
+
+func TestLoad_CORSAllowedOriginsParsesCommaSeparated(t *testing.T) {
+	t.Setenv("APP_ENV", "dev")
+	t.Setenv("HTTP_ADDR", ":8080")
+	t.Setenv("DATABASE_URL", "postgres://eduhub:eduhub@localhost:5433/eduhub?sslmode=disable")
+	t.Setenv("LOG_LEVEL", "info")
+	t.Setenv("CORS_ALLOWED_ORIGINS", "http://localhost:3000, https://eduhub.tj")
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("Load() unexpected error: %v", err)
+	}
+
+	want := []string{"http://localhost:3000", "https://eduhub.tj"}
+	if !slices.Equal(cfg.CORSAllowedOrigins, want) {
+		t.Errorf("CORSAllowedOrigins = %v, want %v", cfg.CORSAllowedOrigins, want)
+	}
+}
+
+func TestLoad_CORSAllowedOriginsUnsetIsEmpty(t *testing.T) {
+	t.Setenv("APP_ENV", "dev")
+	t.Setenv("HTTP_ADDR", ":8080")
+	t.Setenv("DATABASE_URL", "postgres://eduhub:eduhub@localhost:5433/eduhub?sslmode=disable")
+	t.Setenv("LOG_LEVEL", "info")
+	t.Setenv("CORS_ALLOWED_ORIGINS", "")
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("Load() unexpected error: %v", err)
+	}
+	if len(cfg.CORSAllowedOrigins) != 0 {
+		t.Errorf("CORSAllowedOrigins = %v, want empty", cfg.CORSAllowedOrigins)
 	}
 }

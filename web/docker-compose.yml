@@ -1,0 +1,20 @@
+services:
+  # Frontend с hot-reload (next dev) — только для локальной разработки.
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    environment:
+      # Адрес API с точки зрения браузера на хосте (NEXT_PUBLIC_* попадает в клиентский
+      # бандл) — не докер-сети, поэтому localhost, не имя сервиса api.
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+    volumes:
+      - ./:/app
+      # Анонимные volumes поверх bind-mount — не дать хостовым node_modules/.next (если есть)
+      # перекрыть то, что поставил npm ci внутри контейнера.
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - api
