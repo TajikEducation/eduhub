@@ -5,18 +5,19 @@
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 935 nodes · 1265 edges · 142 communities detected
-- Extraction: 69% EXTRACTED · 31% INFERRED · 1% AMBIGUOUS · INFERRED: 387 edges (avg confidence: 0.79)
+- 930 nodes · 1252 edges · 146 communities detected
+- Extraction: 68% EXTRACTED · 31% INFERRED · 1% AMBIGUOUS · INFERRED: 387 edges (avg confidence: 0.79)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
-- [[_COMMUNITY_HTTP Middleware & Tests|HTTP Middleware & Tests]]
 - [[_COMMUNITY_Business Plan Document Sections|Business Plan Document Sections]]
-- [[_COMMUNITY_Project Rules, Contract & SRS|Project Rules, Contract & SRS]]
 - [[_COMMUNITY_Animate & Apple Design Skills|Animate & Apple Design Skills]]
-- [[_COMMUNITY_Clock Package & Misc Helpers|Clock Package & Misc Helpers]]
+- [[_COMMUNITY_Project Rules, Contract & SRS|Project Rules, Contract & SRS]]
+- [[_COMMUNITY_HTTP Middleware & Tests|HTTP Middleware & Tests]]
 - [[_COMMUNITY_Domain Error Taxonomy (apperr)|Domain Error Taxonomy (apperr)]]
+- [[_COMMUNITY_Clock Package & Misc Helpers|Clock Package & Misc Helpers]]
 - [[_COMMUNITY_Design Taste Frontend Rules|Design Taste Frontend Rules]]
+- [[_COMMUNITY_Postgres Pool & Tests|Postgres Pool & Tests]]
 - [[_COMMUNITY_Institution Card UI (Students Guide)|Institution Card UI (Students Guide)]]
 - [[_COMMUNITY_Catalog Search & Filters UI|Catalog Search & Filters UI]]
 - [[_COMMUNITY_Institution Dashboard Overview|Institution Dashboard Overview]]
@@ -32,10 +33,8 @@
 - [[_COMMUNITY_Institution Profile About Tab|Institution Profile About Tab]]
 - [[_COMMUNITY_i18n & Filter Helpers|i18n & Filter Helpers]]
 - [[_COMMUNITY_Backend Config & CORS Tests|Backend Config & CORS Tests]]
-- [[_COMMUNITY_Postgres Pool & Tests|Postgres Pool & Tests]]
 - [[_COMMUNITY_Parent Dashboard Favorites Tab|Parent Dashboard Favorites Tab]]
 - [[_COMMUNITY_Auth LoginRegister Pages|Auth Login/Register Pages]]
-- [[_COMMUNITY_Structured Logger Package|Structured Logger Package]]
 - [[_COMMUNITY_Animation & Design Reference Skills|Animation & Design Reference Skills]]
 - [[_COMMUNITY_Landing Hero Imagery|Landing Hero Imagery]]
 - [[_COMMUNITY_MVP Scope Rules|MVP Scope Rules]]
@@ -46,11 +45,10 @@
 - [[_COMMUNITY_Account Verify Page|Account Verify Page]]
 - [[_COMMUNITY_Institution Map Component|Institution Map Component]]
 - [[_COMMUNITY_Achievement Modal Component|Achievement Modal Component]]
-- [[_COMMUNITY_App State Provider|App State Provider]]
 - [[_COMMUNITY_Scroll Reveal Hook|Scroll Reveal Hook]]
 - [[_COMMUNITY_Chat Window Helpers|Chat Window Helpers]]
-- [[_COMMUNITY_Backend Test Strategy & Constraints|Backend Test Strategy & Constraints]]
 - [[_COMMUNITY_Modular Monolith Architecture|Modular Monolith Architecture]]
+- [[_COMMUNITY_Error Taxonomy (apperr)|Error Taxonomy (apperr)]]
 - [[_COMMUNITY_DashboardLayout()|DashboardLayout()]]
 - [[_COMMUNITY_SiteLayout()|SiteLayout()]]
 - [[_COMMUNITY_ParentsGuidePage()|ParentsGuidePage()]]
@@ -66,7 +64,6 @@
 - [[_COMMUNITY_onClick()|onClick()]]
 - [[_COMMUNITY_toggleFaq()|toggleFaq()]]
 - [[_COMMUNITY_Modal()|Modal()]]
-- [[_COMMUNITY_up()|up()]]
 - [[_COMMUNITY_Banned Output Patterns|Banned Output Patterns]]
 - [[_COMMUNITY_Brandkit Image Generation Skill|Brandkit Image Generation Skill]]
 - [[_COMMUNITY_Next.js Wordmark Logo|Next.js Wordmark Logo]]
@@ -93,8 +90,10 @@
 - [[_COMMUNITY_Footer.tsx|Footer.tsx]]
 - [[_COMMUNITY_MessagesLink.tsx|MessagesLink.tsx]]
 - [[_COMMUNITY_SubjectMotifs.tsx|SubjectMotifs.tsx]]
-- [[_COMMUNITY_InstitCard.tsx|InstitCard.tsx]]
+- [[_COMMUNITY_Catalog Search & Filters UI|Catalog Search & Filters UI]]
 - [[_COMMUNITY_Toast.tsx|Toast.tsx]]
+- [[_COMMUNITY_weblibdata.ts|web/lib/data.ts]]
+- [[_COMMUNITY_App State Provider|App State Provider]]
 - [[_COMMUNITY_File Icon (Next.js Boilerplate)|File Icon (Next.js Boilerplate)]]
 - [[_COMMUNITY_Globe Icon (Next.js Boilerplate)|Globe Icon (Next.js Boilerplate)]]
 - [[_COMMUNITY_Window Icon (Next.js Boilerplate)|Window Icon (Next.js Boilerplate)]]
@@ -110,7 +109,11 @@
 - [[_COMMUNITY_Rule No Platform Stats|Rule: No Platform Stats]]
 - [[_COMMUNITY_Rule Bilingual Captions (tg first)|Rule: Bilingual Captions (tg first)]]
 - [[_COMMUNITY_Rubric Разбор одного критерия|Rubric: Разбор одного критерия]]
+- [[_COMMUNITY_Rubric Что в тарелке|Rubric: Что в тарелке]]
+- [[_COMMUNITY_Rubric Как доехать|Rubric: Как доехать]]
 - [[_COMMUNITY_Rubric Фильтр за три клика|Rubric: Фильтр за три клика]]
+- [[_COMMUNITY_Rubric Педагог|Rubric: Педагог]]
+- [[_COMMUNITY_Rubric Где они сейчас|Rubric: Где они сейчас]]
 - [[_COMMUNITY_Rubric Почему рейтинг нельзя купить|Rubric: Почему рейтинг нельзя купить]]
 - [[_COMMUNITY_Seasonal Content Line|Seasonal Content Line]]
 - [[_COMMUNITY_Migrant Track (VKOK)|Migrant Track (VK/OK)]]
@@ -131,6 +134,7 @@
 - [[_COMMUNITY_Enterprise Tier ($100mo)|Enterprise Tier ($100/mo)]]
 - [[_COMMUNITY_Host + Docker Infra Dev Method|Host + Docker Infra Dev Method]]
 - [[_COMMUNITY_Common Local Dev Issues|Common Local Dev Issues]]
+- [[_COMMUNITY_Frontend Contract References|Frontend Contract References]]
 - [[_COMMUNITY_Schema platform|Schema: platform]]
 - [[_COMMUNITY_platform.seed_refs|platform.seed_refs]]
 - [[_COMMUNITY_Schema auth|Schema: auth]]
@@ -161,8 +165,8 @@
 5. `t()` - 19 edges
 6. `Design Taste Frontend Skill (v2)` - 19 edges
 7. `EduHub Business Plan Pro (v3.5)` - 19 edges
-8. `catalog.institutions` - 17 edges
-9. `Animation Recipes Doc` - 16 edges
+8. `Animation Recipes Doc` - 16 edges
+9. `catalog.institutions` - 16 edges
 10. `Apple Design Skill` - 15 edges
 
 ## Surprising Connections (you probably didn't know these)
@@ -170,12 +174,12 @@
   CLAUDE.md → docs/EduHub_Database_Schema.md
 - `Open Question: /about Stale Investor Numbers` --semantically_similar_to--> `/about Page Publication Ban`  [INFERRED] [semantically similar]
   CLAUDE.local.md → SMM_CONTENT_PLAN.md
-- `Rule: 8 Metrics Not 9` --shares_data_with--> `web/lib/data.ts`  [EXTRACTED]
-  SMM_CONTENT_PLAN.md → web/lib/data.ts
-- `Rubric: Что в тарелке` --shares_data_with--> `web/lib/data.ts`  [EXTRACTED]
-  SMM_CONTENT_PLAN.md → web/lib/data.ts
-- `Rubric: Как доехать` --shares_data_with--> `web/lib/data.ts`  [EXTRACTED]
-  SMM_CONTENT_PLAN.md → web/lib/data.ts
+- `Key Entities (User/Institution/Rating/Review/Teacher/Message)` --conceptually_related_to--> `FR-14/29/30: 8-Metric Rating`  [AMBIGUOUS]
+  CLAUDE.md → docs/EduHub_Functional_Requirements.md
+- `Key Entities (User/Institution/Rating/Review/Teacher/Message)` --shares_data_with--> `catalog.institution_staff`  [INFERRED]
+  CLAUDE.md → docs/EduHub_Database_Schema.md
+- `Checkpoint State (Milestone 0 Done)` --conceptually_related_to--> `Rule: No /compare Promise`  [AMBIGUOUS]
+  CLAUDE.local.md → SMM_CONTENT_PLAN.md
 
 ## Hyperedges (group relationships)
 - **Rating Integrity & Anti-Fraud Mechanisms** — srs_fr_18_31_antifraud, srs_fr_29_review_threshold, srs_fr_30_recency_decay, srs_fr_34_owner_verification, srs_fr_15_review_verification [INFERRED 0.85]
@@ -184,97 +188,97 @@
 
 ## Communities
 
-### Community 0 - "HTTP Middleware & Tests"
-Cohesion: 0.06
-Nodes (62): AccessLog(), TestAccessLog_DefaultStatusIsOK(), TestAccessLog_DoesNotLeakQueryString(), TestAccessLog_RequestIDMatchesContext(), TestAccessLog_WritesExpectedFields(), Deps, Pinger, Chain() (+54 more)
-
-### Community 1 - "Business Plan Document Sections"
+### Community 0 - "Business Plan Document Sections"
 Cohesion: 0.05
 Nodes (81): BP §14 Видение на 5 лет, BP Приложение A — журнал изменений v3.3, BP §09 Конкурентный анализ (FindSchool.kz, Eduland.uz), BP §01 Резюме проекта, BP §10 Финансовая модель (доход/расходы/прибыль год 1), BP §04 Типы образовательных учреждений, BP §11 Ключевые показатели (КПЭ), BP §09 Рынок TAM/SAM/SOM (пересчитано v3.3) (+73 more)
 
-### Community 2 - "Project Rules, Contract & SRS"
-Cohesion: 0.03
-Nodes (78): Concurrency Rules, Docker Deployment Strategy, DB Schema Ownership Rule, AuthN/AuthZ Design, FR Traceability Rule, Key Entities (User/Institution/Rating/Review/Teacher/Message), RBAC Roles, .claude/rules/architecture.md (+70 more)
-
-### Community 3 - "Animate & Apple Design Skills"
+### Community 1 - "Animate & Apple Design Skills"
 Cohesion: 0.03
 Nodes (73): Animate Build Sequence, Animate Easing Tokens, Animation Recipes Doc, Animate Skill, Animate Spring Config, Apple Design Skill, Direct Manipulation (1:1 Tracking), Eight Design Principles (+65 more)
 
-### Community 4 - "Clock Package & Misc Helpers"
+### Community 2 - "Project Rules, Contract & SRS"
+Cohesion: 0.04
+Nodes (71): Concurrency Rules, Docker Deployment Strategy, DB Schema Ownership Rule, AuthN/AuthZ Design, FR Traceability Rule, Key Entities (User/Institution/Rating/Review/Teacher/Message), RBAC Roles, .claude/rules/architecture.md (+63 more)
+
+### Community 3 - "HTTP Middleware & Tests"
+Cohesion: 0.09
+Nodes (44): AccessLog(), TestAccessLog_DefaultStatusIsOK(), TestAccessLog_DoesNotLeakQueryString(), TestAccessLog_RequestIDMatchesContext(), TestAccessLog_WritesExpectedFields(), Chain(), New(), NewFake() (+36 more)
+
+### Community 4 - "Domain Error Taxonomy (apperr)"
+Cohesion: 0.07
+Nodes (45): Conflict(), Error, Forbidden(), Internal(), Invalid(), NotFound(), RateLimited(), sentinel (+37 more)
+
+### Community 5 - "Clock Package & Misc Helpers"
 Cohesion: 0.06
 Nodes (31): Clock, Fake, realClock, TestFake_AdvanceMovesNow(), TestFake_NowReturnsStart(), TestNew_ReturnsRealTime(), bi(), newAchievement() (+23 more)
-
-### Community 5 - "Domain Error Taxonomy (apperr)"
-Cohesion: 0.08
-Nodes (42): Conflict(), Error, Forbidden(), Internal(), Invalid(), NotFound(), RateLimited(), sentinel (+34 more)
 
 ### Community 6 - "Design Taste Frontend Rules"
 Cohesion: 0.06
 Nodes (39): Design Taste Frontend Skill (v2), Design Taste Frontend v1 Skill, Brief Inference Process, Brief → Design System Map, Eyebrow Restraint Rule, Hero Layout Discipline, Horizontal-Pan Scroll Pattern, Marquee Max-One-Per-Page Rule (+31 more)
 
-### Community 7 - "Institution Card UI (Students Guide)"
+### Community 7 - "Postgres Pool & Tests"
+Cohesion: 0.09
+Nodes (27): Deps, fakePinger, Pinger, Healthz(), pingWithTimeout(), Readyz(), TestHealth_Healthz_ReturnsOKWithoutDependencies(), TestHealth_Readyz_FailingPingerReturns503WithName() (+19 more)
+
+### Community 8 - "Institution Card UI (Students Guide)"
 Cohesion: 0.08
 Nodes (28): EduHub students guide (/guide/students), Institution: Технологический институт «Ренессанс», Universities category page (/universities, "Вузы и колледжи"), "Кабинет" button (teal, links to user account), Curriculum/amenity chips: "Питание", "STEM", Favorite heart icon (top-right of card image), Price label "1800 сом/мес", Star rating 4.7 (189 reviews) (+20 more)
 
-### Community 8 - "Catalog Search & Filters UI"
+### Community 9 - "Catalog Search & Filters UI"
 Cohesion: 0.08
 Nodes (24): Плавающая кнопка сообщений (иконка чата с бейджем «2» непрочитанных), Бейджи программы обучения на карточке (Питание/Гос. программа/STEM) — CURRICULUM_META/AMENITY-стиль чипы, Транзиентный Next.js dev-overlay бейдж «1 Issue» (не продовый UI, dev-артефакт), Фильтр «Район»: Сино/Фирдавси/И.Сомони/Шохмансур, Иконка «сердце» — добавление в избранное на карточке, Панель «Фильтры» — тип учреждения, регион, район, стоимость, минимальный рейтинг, Карточка «Школа «Ганджи Худжанд»» — Школа, Худжанд, бейдж «Топ региона», InstitCard — карточка учреждения (фото, бейдж статуса, тип, район, название, рейтинг звёздами, отзывы, верификация МОН РТ, теги программ, цена, избранное) (+16 more)
 
-### Community 9 - "Institution Dashboard Overview"
+### Community 10 - "Institution Dashboard Overview"
 Cohesion: 0.11
 Nodes (21): Floating chat widget icon (bottom-right), /dashboard route (institution admin panel, wave 2), Dashboard sidebar (Кабинет учреждения nav), /guide/institutions guide page (uses this screenshot), Гимназия «Ситораи Дониш» (institution), inst-1-overview.png (dashboard overview screenshot), Institution Dashboard "Обзор" page, Language switcher ТЧ/РУ (+13 more)
 
-### Community 10 - "Vacancy ADR & Related FRs"
+### Community 11 - "Vacancy ADR & Related FRs"
 Cohesion: 0.11
 Nodes (21): /applicants/[id] Route, ADR-0001 Decision (Variant C), /vacancies/[id] Route, Variant A: Keep As-Is, Variant B: Full Reversal, Variant C: Split Responsibility, API Versioning Policy, Technology Stack (+13 more)
 
-### Community 11 - "Vacancy Application Page UI"
+### Community 12 - "Vacancy Application Page UI"
 Cohesion: 0.11
 Nodes (20): addApplication() idempotent apply flow (Application entity), «Откликнуться» CTA button (teal, full-width), Back button ("Назад"), «Кабинет» button, Floating chat widget (bottom-right, badge "2"), Описание block (vacancy description text), Next.js dev overlay "1 Issue" badge (transient, bottom-left), «Перейти в профиль учреждения» link (+12 more)
 
-### Community 12 - "Institution Profile Alumni Tab"
+### Community 13 - "Institution Profile Alumni Tab"
 Cohesion: 0.15
 Nodes (17): Alumni section heading (Выпускники) with alumni card grid, Alumni tab (Выпускники) - active tab, teal underline, Назад (Back) button, top-left over hero image, Verification badges: МОН РТ, Топ выбор, Alumni card: Санги Давлатов, Выпуск 2022, МФТИ физика, Alumni card: Зухра Каримова, Выпуск 2020, Инженер-программист в Душанбе, Alumni card: Бобур Рахимов, Выпуск 2019, Врач-резидент ТГМУ, Alumni card: Мадина Сафарова, Выпуск 2021, Магистрант Университета Турку (Финляндия) (+9 more)
 
-### Community 13 - "Institution Profile Reviews Tab"
+### Community 14 - "Institution Profile Reviews Tab"
 Cohesion: 0.14
 Nodes (16): 'Назад' back button, Institution badges (Школа, МОН РТ verified, Топ выбор), Floating chat widget button (unread badge '2'), '1 Issue' Next.js dev overlay badge (transient dev artifact, not product UI), Гимназия «Ситораи Дониш» (sample institution, 4.6/214 reviews), Institution profile page (institutions/[id]), Institution reply block ('Ответ учреждения'), Global NavBar (Главная/Учреждения/Вакансии/Руководства/О нас, region selector, ТҶ/РУ, bell, Кабинет, role dropdown) (+8 more)
 
-### Community 14 - "Institution Dashboard Staff Tab"
+### Community 15 - "Institution Dashboard Staff Tab"
 Cohesion: 0.16
 Nodes (15): Кабинет учреждения — вкладка «Обзор» (dashboard overview), Next.js dev-overlay бейдж «1 Issue», Гайд «/guide/institutions» (institution onboarding guide), Гимназия «Ситораи Дониш» (demo institution), Пункт сайдбара «Персонал», Глобальный NavBar (Главная/Учреждения/Вакансии/Руководства/О нас, регион, ТЧ/РУ, колокольчик, Кабинет), Блок «Рейтинг по параметрам» (Качество обучения, Условия и помещения, ...), Ролевой дропдаун «Учреждение» в NavBar (+7 more)
 
-### Community 15 - "Applicant Profile Page UI"
+### Community 16 - "Applicant Profile Page UI"
 Cohesion: 0.22
 Nodes (14): Поле «О себе» («Опытный педагог с 8-летним стажем»), Подвкладка «Достижения», Кабинет соискателя (страница /account/applicant), Плавающий чат-виджет (иконка сообщений, бейдж «2»), Список «Образование» (ТГПУ, физмат, 2016 + кнопка «Добавить»), Сущность Applicant (модель данных соискателя), Поле «Имя» (Фаррух Тохиров), Фото профиля соискателя (аватар-загрузка) (+6 more)
 
-### Community 16 - "Vacancies Listing Page UI"
+### Community 17 - "Vacancies Listing Page UI"
 Cohesion: 0.16
 Nodes (14): Кнопка «Кабинет», Плавающий виджет чата/сообщений (иконка с бейджем «2»), Hero-баннер «Вакансии в образовательных учреждениях», Переключатель языка ТҶ/РУ (активен РУ), NavBar (главная навигация EduHub), Колокольчик уведомлений (с индикатором), Селектор региона «Все регионы», Кнопка роли «Соискатель» (ролевой переключатель прототипа) (+6 more)
 
-### Community 17 - "Institution Profile Reviews (Parents Guide)"
+### Community 18 - "Institution Profile Reviews (Parents Guide)"
 Cohesion: 0.18
 Nodes (14): Floating chat/messages bubble with unread badge '2', Cover photo + badges (Школа/МОН РТ/Топ выбор) + title + rating + price, /guide/parents guide page (this screenshot used as illustrative step image), Институция: Гимназия «Ситораи Дониш» (Сино, Душанбе, 4.6★, 214 отзывов, 800 сом/мес), Institution profile page (institutions/[id]), «Ответ учреждения» reply block under review, MetricBar component (histogram bars in rating summary, animated via transform:scaleX per wave-9 fix), NavBar (Главная/Учреждения/Вакансии/Руководства/О нас + region/lang/notif/Кабинет/Родитель) (+6 more)
 
-### Community 18 - "Geo/GPS Helper Functions"
+### Community 19 - "Geo/GPS Helper Functions"
 Cohesion: 0.17
 Nodes (6): detectCoords(), detectRegionByGPS(), haversine(), nearestRegion(), useGPS(), locateMe()
 
-### Community 19 - "Institution Profile About Tab"
+### Community 20 - "Institution Profile About Tab"
 Cohesion: 0.2
 Nodes (12): web/app/(site)/institutions/[id]/page.tsx (institution profile page component), 'О нас' description block with 'Читать полностью' expand link, Floating chat widget icon with unread badge ('2'), Contacts sidebar: phone/email/address, website link, social badges (IG/TG/FB), 'Написать в чат' button, 'Режим работы' hours, Гимназия «Ситораи Дониш» (depicted institution, Сино район, Душанбе), Institution header: name, star rating 4.6, review count (214), location, price (800 сом/мес), Key-fact cards row: founded year (1997), student count (840), age range (7-17 лет), student:staff ratio (140:1), 'Расположение' block: регион/город/район/улица fields (+4 more)
 
-### Community 20 - "i18n & Filter Helpers"
+### Community 21 - "i18n & Filter Helpers"
 Cohesion: 0.2
 Nodes (4): useT(), Chip(), clearAll(), VacancyRow()
 
-### Community 21 - "Backend Config & CORS Tests"
+### Community 22 - "Backend Config & CORS Tests"
 Cohesion: 0.31
 Nodes (8): Config, Load(), parseCORSAllowedOrigins(), TestLoad_AllVarsSet(), TestLoad_CORSAllowedOriginsParsesCommaSeparated(), TestLoad_CORSAllowedOriginsUnsetIsEmpty(), TestLoad_DefaultHTTPAddr(), TestLoad_MissingDatabaseURL()
-
-### Community 22 - "Postgres Pool & Tests"
-Cohesion: 0.36
-Nodes (6): fakePinger, Open(), testDatabaseURL(), TestOpen_ConnectsAndPings(), TestOpen_SkipsWithoutTestDatabaseURL(), TestOpen_UnreachableHostTimesOut()
 
 ### Community 23 - "Parent Dashboard Favorites Tab"
 Cohesion: 0.28
@@ -284,175 +288,175 @@ Nodes (9): Плавающий виджет чата (нижний правый �
 Cohesion: 0.25
 Nodes (1): submit()
 
-### Community 25 - "Structured Logger Package"
-Cohesion: 0.29
-Nodes (6): New(), parseLevel(), PtrOrNil(), TestNew_DebugSuppressedAtInfoLevel(), TestNew_WritesJSONWithExpectedKeys(), TestPtrOrNil()
-
-### Community 26 - "Animation & Design Reference Skills"
+### Community 25 - "Animation & Design Reference Skills"
 Cohesion: 0.43
 Nodes (8): Animation Vocabulary Glossary, Design Engineering (Emil Kowalski Philosophy), Awwwards-Level Design Engineering, Vanguard UI Architect, Premium Utilitarian Minimalism UI Architect, Redesign Existing Projects Skill, Reviewing Animations, Animation Standards Reference
 
-### Community 27 - "Landing Hero Imagery"
+### Community 26 - "Landing Hero Imagery"
 Cohesion: 0.29
 Nodes (8): EduHub Tajikistan platform, Stack of books, Young boy with glasses (subject), World globe, hero-globe.jpg (child exploring globe with magnifying glass), Magnifying glass, Microscope, Cup of colored pencils and scissors
 
-### Community 28 - "MVP Scope Rules"
+### Community 27 - "MVP Scope Rules"
 Cohesion: 0.4
 Nodes (5): Observability Excluded from MVP, MVP Scope Rule, NEVER Rules, Observability Removed From MVP, Out of Scope Section
 
-### Community 29 - "Messages Page"
+### Community 28 - "Messages Page"
 Cohesion: 0.5
 Nodes (0): 
 
-### Community 30 - "Frontend Bootstrap Docs"
+### Community 29 - "Frontend Bootstrap Docs"
 Cohesion: 0.5
 Nodes (4): web/README.md, next/font Geist optimization, create-next-app bootstrap, Deploy on Vercel
 
-### Community 31 - "Redis Cache & Contract Risks"
+### Community 30 - "Redis Cache & Contract Risks"
 Cohesion: 0.5
 Nodes (4): Redis Caching Strategy, Frontend-Backend Contract Mismatches, Risks Section, Task 31: Redis Cache + Perf
 
-### Community 32 - "Idempotency & Outbox Pattern"
+### Community 31 - "Idempotency & Outbox Pattern"
 Cohesion: 0.5
 Nodes (4): Inter-Service Interaction (Interfaces + Outbox), communications.processed_events, platform.idempotency_keys, reviews.outbox
 
-### Community 33 - "Account Verify Page"
+### Community 32 - "Account Verify Page"
 Cohesion: 0.67
 Nodes (0): 
 
-### Community 34 - "Institution Map Component"
+### Community 33 - "Institution Map Component"
 Cohesion: 0.67
 Nodes (0): 
 
-### Community 35 - "Achievement Modal Component"
+### Community 34 - "Achievement Modal Component"
 Cohesion: 0.67
 Nodes (0): 
 
-### Community 36 - "App State Provider"
+### Community 35 - "Scroll Reveal Hook"
 Cohesion: 0.67
 Nodes (0): 
 
-### Community 37 - "Scroll Reveal Hook"
-Cohesion: 0.67
-Nodes (0): 
-
-### Community 38 - "Chat Window Helpers"
+### Community 36 - "Chat Window Helpers"
 Cohesion: 1.0
 Nodes (2): chatHref(), resolveConvId()
 
-### Community 39 - "Backend Test Strategy & Constraints"
-Cohesion: 0.67
-Nodes (3): Error Taxonomy (apperr), Test Strategy, Non-Negotiable Constraints
-
-### Community 40 - "Modular Monolith Architecture"
+### Community 37 - "Modular Monolith Architecture"
 Cohesion: 0.67
 Nodes (3): Modular Monolith Architecture Style, EduHub Backend Development Plan Document, Modular Monolith Architecture Decision
 
-### Community 41 - "DashboardLayout()"
+### Community 38 - "Error Taxonomy (apperr)"
+Cohesion: 0.67
+Nodes (3): Error Taxonomy (apperr), Test Strategy, Non-Negotiable Constraints
+
+### Community 39 - "DashboardLayout()"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 42 - "SiteLayout()"
+### Community 40 - "SiteLayout()"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 43 - "ParentsGuidePage()"
+### Community 41 - "ParentsGuidePage()"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 44 - "ApplicantsGuidePage()"
+### Community 42 - "ApplicantsGuidePage()"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 45 - "StudentsGuidePage()"
+### Community 43 - "StudentsGuidePage()"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 46 - "KindergartensPage()"
+### Community 44 - "KindergartensPage()"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 47 - "UniversitiesPage()"
+### Community 45 - "UniversitiesPage()"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 48 - "CentersPage()"
+### Community 46 - "CentersPage()"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 49 - "AccountPage()"
+### Community 47 - "AccountPage()"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 50 - "ParentAccountPage()"
+### Community 48 - "ParentAccountPage()"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 51 - "ApplicantAccountPage()"
+### Community 49 - "ApplicantAccountPage()"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 52 - "SchoolsPage()"
+### Community 50 - "SchoolsPage()"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 53 - "onClick()"
+### Community 51 - "onClick()"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 54 - "toggleFaq()"
+### Community 52 - "toggleFaq()"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 55 - "Modal()"
+### Community 53 - "Modal()"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 56 - "up()"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 57 - "Banned Output Patterns"
+### Community 54 - "Banned Output Patterns"
 Cohesion: 1.0
 Nodes (2): Banned Output Patterns, Full Output Enforcement Skill
 
-### Community 58 - "Brandkit Image Generation Skill"
+### Community 55 - "Brandkit Image Generation Skill"
 Cohesion: 1.0
 Nodes (2): Brandkit Image Generation Skill, Image-First Website Design to Code
 
-### Community 59 - "Next.js Wordmark Logo"
+### Community 56 - "Next.js Wordmark Logo"
 Cohesion: 1.0
 Nodes (2): Next.js Wordmark Logo, Vercel Logo
 
-### Community 60 - "Open Question: /about Stale Investor Numbers"
+### Community 57 - "Open Question: /about Stale Investor Numbers"
 Cohesion: 1.0
 Nodes (2): Open Question: /about Stale Investor Numbers, /about Page Publication Ban
 
-### Community 61 - "Free Tier"
+### Community 58 - "Free Tier"
 Cohesion: 1.0
 Nodes (2): Free Tier, No B2B Entry Point
 
-### Community 62 - "Graphify Knowledge Graph Rule"
+### Community 59 - "Graphify Knowledge Graph Rule"
 Cohesion: 1.0
 Nodes (1): Graphify Knowledge Graph Rule
 
-### Community 63 - "postcss.config.mjs"
+### Community 60 - "postcss.config.mjs"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 64 - "next-env.d.ts"
+### Community 61 - "next-env.d.ts"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 65 - "eslint.config.mjs"
+### Community 62 - "eslint.config.mjs"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 66 - "next.config.ts"
+### Community 63 - "next.config.ts"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 67 - "layout.tsx"
+### Community 64 - "layout.tsx"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 65 - "page.tsx"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 66 - "page.tsx"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 67 - "page.tsx"
 Cohesion: 1.0
 Nodes (0): 
 
@@ -480,275 +484,291 @@ Nodes (0):
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 74 - "page.tsx"
+### Community 74 - "MaintenanceBanner.tsx"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 75 - "page.tsx"
+### Community 75 - "AmenityModal.tsx"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 76 - "page.tsx"
+### Community 76 - "CategoryListing.tsx"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 77 - "MaintenanceBanner.tsx"
+### Community 77 - "Footer.tsx"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 78 - "AmenityModal.tsx"
+### Community 78 - "MessagesLink.tsx"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 79 - "CategoryListing.tsx"
+### Community 79 - "SubjectMotifs.tsx"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 80 - "Footer.tsx"
+### Community 80 - "Catalog Search & Filters UI"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 81 - "MessagesLink.tsx"
+### Community 81 - "Toast.tsx"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 82 - "SubjectMotifs.tsx"
+### Community 82 - "web/lib/data.ts"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (1): web/lib/data.ts
 
-### Community 83 - "InstitCard.tsx"
+### Community 83 - "App State Provider"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (1): web/lib/app-state.tsx
 
-### Community 84 - "Toast.tsx"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 85 - "File Icon (Next.js Boilerplate)"
+### Community 84 - "File Icon (Next.js Boilerplate)"
 Cohesion: 1.0
 Nodes (1): File Icon (Next.js Boilerplate)
 
-### Community 86 - "Globe Icon (Next.js Boilerplate)"
+### Community 85 - "Globe Icon (Next.js Boilerplate)"
 Cohesion: 1.0
 Nodes (1): Globe Icon (Next.js Boilerplate)
 
-### Community 87 - "Window Icon (Next.js Boilerplate)"
+### Community 86 - "Window Icon (Next.js Boilerplate)"
 Cohesion: 1.0
 Nodes (1): Window Icon (Next.js Boilerplate)
 
-### Community 88 - "Mandatory Behavior"
+### Community 87 - "Mandatory Behavior"
 Cohesion: 1.0
 Nodes (1): Mandatory Behavior
 
-### Community 89 - "MON Role Removed Decision"
+### Community 88 - "MON Role Removed Decision"
 Cohesion: 1.0
 Nodes (1): MON Role Removed Decision
 
-### Community 90 - "Agent Delegation Pattern Lesson"
+### Community 89 - "Agent Delegation Pattern Lesson"
 Cohesion: 1.0
 Nodes (1): Agent Delegation Pattern Lesson
 
-### Community 91 - "Channel Prioritization"
+### Community 90 - "Channel Prioritization"
 Cohesion: 1.0
 Nodes (1): Channel Prioritization
 
-### Community 92 - "Instagram Channel"
+### Community 91 - "Instagram Channel"
 Cohesion: 1.0
 Nodes (1): Instagram Channel
 
-### Community 93 - "VK/OK Migrant Channel"
+### Community 92 - "VK/OK Migrant Channel"
 Cohesion: 1.0
 Nodes (1): VK/OK Migrant Channel
 
-### Community 94 - "Facebook B2B Channel"
+### Community 93 - "Facebook B2B Channel"
 Cohesion: 1.0
 Nodes (1): Facebook B2B Channel
 
-### Community 95 - "Telegram Channel"
+### Community 94 - "Telegram Channel"
 Cohesion: 1.0
 Nodes (1): Telegram Channel
 
-### Community 96 - "TikTok Deferred"
+### Community 95 - "TikTok Deferred"
 Cohesion: 1.0
 Nodes (1): TikTok Deferred
 
-### Community 97 - "Rule: No Platform Stats"
+### Community 96 - "Rule: No Platform Stats"
 Cohesion: 1.0
 Nodes (1): Rule: No Platform Stats
 
-### Community 98 - "Rule: Bilingual Captions (tg first)"
+### Community 97 - "Rule: Bilingual Captions (tg first)"
 Cohesion: 1.0
 Nodes (1): Rule: Bilingual Captions (tg first)
 
-### Community 99 - "Rubric: Разбор одного критерия"
+### Community 98 - "Rubric: Разбор одного критерия"
 Cohesion: 1.0
 Nodes (1): Rubric: Разбор одного критерия
 
-### Community 100 - "Rubric: Фильтр за три клика"
+### Community 99 - "Rubric: Что в тарелке"
+Cohesion: 1.0
+Nodes (1): Rubric: Что в тарелке
+
+### Community 100 - "Rubric: Как доехать"
+Cohesion: 1.0
+Nodes (1): Rubric: Как доехать
+
+### Community 101 - "Rubric: Фильтр за три клика"
 Cohesion: 1.0
 Nodes (1): Rubric: Фильтр за три клика
 
-### Community 101 - "Rubric: Почему рейтинг нельзя купить"
+### Community 102 - "Rubric: Педагог"
+Cohesion: 1.0
+Nodes (1): Rubric: Педагог
+
+### Community 103 - "Rubric: Где они сейчас"
+Cohesion: 1.0
+Nodes (1): Rubric: Где они сейчас
+
+### Community 104 - "Rubric: Почему рейтинг нельзя купить"
 Cohesion: 1.0
 Nodes (1): Rubric: Почему рейтинг нельзя купить
 
-### Community 102 - "Seasonal Content Line"
+### Community 105 - "Seasonal Content Line"
 Cohesion: 1.0
 Nodes (1): Seasonal Content Line
 
-### Community 103 - "Migrant Track (VK/OK)"
+### Community 106 - "Migrant Track (VK/OK)"
 Cohesion: 1.0
 Nodes (1): Migrant Track (VK/OK)
 
-### Community 104 - "Job Seekers Rubric"
+### Community 107 - "Job Seekers Rubric"
 Cohesion: 1.0
 Nodes (1): Job Seekers Rubric
 
-### Community 105 - "Growth Loop Process"
+### Community 108 - "Growth Loop Process"
 Cohesion: 1.0
 Nodes (1): Growth Loop Process
 
-### Community 106 - "Success Metrics"
+### Community 109 - "Success Metrics"
 Cohesion: 1.0
 Nodes (1): Success Metrics
 
-### Community 107 - "Site Audit Findings (2026-08-21)"
+### Community 110 - "Site Audit Findings (2026-08-21)"
 Cohesion: 1.0
 Nodes (1): Site Audit Findings (2026-08-21)
 
-### Community 108 - "Broken Visit Request Form"
+### Community 111 - "Broken Visit Request Form"
 Cohesion: 1.0
 Nodes (1): Broken Visit Request Form
 
-### Community 109 - "Broken Hero Filter Chips"
+### Community 112 - "Broken Hero Filter Chips"
 Cohesion: 1.0
 Nodes (1): Broken Hero Filter Chips
 
-### Community 110 - "Fake Amenities/Ratings Histogram"
+### Community 113 - "Fake Amenities/Ratings Histogram"
 Cohesion: 1.0
 Nodes (1): Fake Amenities/Ratings Histogram
 
-### Community 111 - "Mobile Responsiveness Gap"
+### Community 114 - "Mobile Responsiveness Gap"
 Cohesion: 1.0
 Nodes (1): Mobile Responsiveness Gap
 
-### Community 112 - "Service Boundaries (6 Services)"
+### Community 115 - "Service Boundaries (6 Services)"
 Cohesion: 1.0
 Nodes (1): Service Boundaries (6 Services)
 
-### Community 113 - "Clean Architecture Layers"
+### Community 116 - "Clean Architecture Layers"
 Cohesion: 1.0
 Nodes (1): Clean Architecture Layers
 
-### Community 114 - "Validation Placement Rule"
+### Community 117 - "Validation Placement Rule"
 Cohesion: 1.0
 Nodes (1): Validation Placement Rule
 
-### Community 115 - "Config Package Design"
+### Community 118 - "Config Package Design"
 Cohesion: 1.0
 Nodes (1): Config Package Design
 
-### Community 116 - "Logging Convention (slog)"
+### Community 119 - "Logging Convention (slog)"
 Cohesion: 1.0
 Nodes (1): Logging Convention (slog)
 
-### Community 117 - "Russian Comment Convention"
+### Community 120 - "Russian Comment Convention"
 Cohesion: 1.0
 Nodes (1): Russian Comment Convention
 
-### Community 118 - "Enterprise Tier ($100/mo)"
+### Community 121 - "Enterprise Tier ($100/mo)"
 Cohesion: 1.0
 Nodes (1): Enterprise Tier ($100/mo)
 
-### Community 119 - "Host + Docker Infra Dev Method"
+### Community 122 - "Host + Docker Infra Dev Method"
 Cohesion: 1.0
 Nodes (1): Host + Docker Infra Dev Method
 
-### Community 120 - "Common Local Dev Issues"
+### Community 123 - "Common Local Dev Issues"
 Cohesion: 1.0
 Nodes (1): Common Local Dev Issues
 
-### Community 121 - "Schema: platform"
+### Community 124 - "Frontend Contract References"
+Cohesion: 1.0
+Nodes (1): Frontend Contract References
+
+### Community 125 - "Schema: platform"
 Cohesion: 1.0
 Nodes (1): Schema: platform
 
-### Community 122 - "platform.seed_refs"
+### Community 126 - "platform.seed_refs"
 Cohesion: 1.0
 Nodes (1): platform.seed_refs
 
-### Community 123 - "Schema: auth"
+### Community 127 - "Schema: auth"
 Cohesion: 1.0
 Nodes (1): Schema: auth
 
-### Community 124 - "auth.verification_codes"
+### Community 128 - "auth.verification_codes"
 Cohesion: 1.0
 Nodes (1): auth.verification_codes
 
-### Community 125 - "auth.refresh_tokens"
+### Community 129 - "auth.refresh_tokens"
 Cohesion: 1.0
 Nodes (1): auth.refresh_tokens
 
-### Community 126 - "Schema: catalog"
+### Community 130 - "Schema: catalog"
 Cohesion: 1.0
 Nodes (1): Schema: catalog
 
-### Community 127 - "catalog.institution_owners"
+### Community 131 - "catalog.institution_owners"
 Cohesion: 1.0
 Nodes (1): catalog.institution_owners
 
-### Community 128 - "catalog.institution_alumni"
+### Community 132 - "catalog.institution_alumni"
 Cohesion: 1.0
 Nodes (1): catalog.institution_alumni
 
-### Community 129 - "catalog.news_articles"
+### Community 133 - "catalog.news_articles"
 Cohesion: 1.0
 Nodes (1): catalog.news_articles
 
-### Community 130 - "Schema: reviews"
+### Community 134 - "Schema: reviews"
 Cohesion: 1.0
 Nodes (1): Schema: reviews
 
-### Community 131 - "reviews.employer_review_metrics"
+### Community 135 - "reviews.employer_review_metrics"
 Cohesion: 1.0
 Nodes (1): reviews.employer_review_metrics
 
-### Community 132 - "Schema: moderation"
+### Community 136 - "Schema: moderation"
 Cohesion: 1.0
 Nodes (1): Schema: moderation
 
-### Community 133 - "Schema: communications"
+### Community 137 - "Schema: communications"
 Cohesion: 1.0
 Nodes (1): Schema: communications
 
-### Community 134 - "communications.visit_requests"
+### Community 138 - "communications.visit_requests"
 Cohesion: 1.0
 Nodes (1): communications.visit_requests
 
-### Community 135 - "communications.notifications"
+### Community 139 - "communications.notifications"
 Cohesion: 1.0
 Nodes (1): communications.notifications
 
-### Community 136 - "communications.push_subscriptions"
+### Community 140 - "communications.push_subscriptions"
 Cohesion: 1.0
 Nodes (1): communications.push_subscriptions
 
-### Community 137 - "communications.applicant_achievements"
+### Community 141 - "communications.applicant_achievements"
 Cohesion: 1.0
 Nodes (1): communications.applicant_achievements
 
-### Community 138 - "Schema: analytics"
+### Community 142 - "Schema: analytics"
 Cohesion: 1.0
 Nodes (1): Schema: analytics
 
-### Community 139 - "FR-16 Обязательная модерация отзывов (≤24-48ч)"
+### Community 143 - "FR-16 Обязательная модерация отзывов (≤24-48ч)"
 Cohesion: 1.0
 Nodes (1): FR-16 Обязательная модерация отзывов (≤24-48ч)
 
-### Community 140 - "FR-20 Уведомления (push/SMS/email)"
+### Community 144 - "FR-20 Уведомления (push/SMS/email)"
 Cohesion: 1.0
 Nodes (1): FR-20 Уведомления (push/SMS/email)
 
-### Community 141 - "FR-21 Реферальная система"
+### Community 145 - "FR-21 Реферальная система"
 Cohesion: 1.0
 Nodes (1): FR-21 Реферальная система
 
@@ -775,7 +795,7 @@ Nodes (1): FR-21 Реферальная система
   SMM_CONTENT_PLAN.md · relation: conceptually_related_to
 
 ## Knowledge Gaps
-- **329 isolated node(s):** `Pinger`, `Deps`, `Config`, `errorBody`, `Middleware` (+324 more)
+- **333 isolated node(s):** `web/lib/data.ts`, `web/lib/app-state.tsx`, `Pinger`, `Deps`, `Config` (+328 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **Thin community `DashboardLayout()`** (2 nodes): `DashboardLayout()`, `layout.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
@@ -806,8 +826,6 @@ Nodes (1): FR-21 Реферальная система
 - **Thin community `toggleFaq()`** (2 nodes): `toggleFaq()`, `GuidePage.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Modal()`** (2 nodes): `Modal()`, `Modal.tsx`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `up()`** (2 nodes): `up()`, `data.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Banned Output Patterns`** (2 nodes): `Banned Output Patterns`, `Full Output Enforcement Skill`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
@@ -861,9 +879,13 @@ Nodes (1): FR-21 Реферальная система
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `SubjectMotifs.tsx`** (1 nodes): `SubjectMotifs.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `InstitCard.tsx`** (1 nodes): `InstitCard.tsx`
+- **Thin community `Catalog Search & Filters UI`** (1 nodes): `InstitCard.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Toast.tsx`** (1 nodes): `Toast.tsx`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `web/lib/data.ts`** (1 nodes): `web/lib/data.ts`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `App State Provider`** (1 nodes): `web/lib/app-state.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `File Icon (Next.js Boilerplate)`** (1 nodes): `File Icon (Next.js Boilerplate)`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
@@ -895,7 +917,15 @@ Nodes (1): FR-21 Реферальная система
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Rubric: Разбор одного критерия`** (1 nodes): `Rubric: Разбор одного критерия`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Rubric: Что в тарелке`** (1 nodes): `Rubric: Что в тарелке`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Rubric: Как доехать`** (1 nodes): `Rubric: Как доехать`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Rubric: Фильтр за три клика`** (1 nodes): `Rubric: Фильтр за три клика`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Rubric: Педагог`** (1 nodes): `Rubric: Педагог`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Rubric: Где они сейчас`** (1 nodes): `Rubric: Где они сейчас`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Rubric: Почему рейтинг нельзя купить`** (1 nodes): `Rubric: Почему рейтинг нельзя купить`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
@@ -936,6 +966,8 @@ Nodes (1): FR-21 Реферальная система
 - **Thin community `Host + Docker Infra Dev Method`** (1 nodes): `Host + Docker Infra Dev Method`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Common Local Dev Issues`** (1 nodes): `Common Local Dev Issues`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Frontend Contract References`** (1 nodes): `Frontend Contract References`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Schema: platform`** (1 nodes): `Schema: platform`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
