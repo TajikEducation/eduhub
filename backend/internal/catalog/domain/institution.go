@@ -145,6 +145,10 @@ type Institution struct {
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
 
+	// DistanceM — расстояние в метрах от точки запроса (Filter.Lat/Lng), если она была задана.
+	// nil означает «не запрашивалось» (гео в фильтре отсутствовал), не «0».
+	DistanceM *float64
+
 	Staff           []StaffMember
 	Achievements    []Achievement
 	Gallery         []GalleryItem

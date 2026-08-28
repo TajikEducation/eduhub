@@ -45,8 +45,7 @@ const listColumns = `
 	rating_avg, review_count, created_at, updated_at
 `
 
-// List возвращает институции, удовлетворяющие фильтру f. Без гео-фильтра/сортировки
-// (задача 22), без пагинации (задача 23).
+// List возвращает институции, удовлетворяющие фильтру f. Без пагинации (задача 23).
 func (r *InstitutionRepo) List(ctx context.Context, f domain.Filter) ([]domain.Institution, error) {
 	var conditions []string
 	var args []any
@@ -94,9 +93,41 @@ func (r *InstitutionRepo) List(ctx context.Context, f domain.Filter) ([]domain.I
 		addCond("verified = $%d", *f.Verified)
 	}
 
-	query := "SELECT " + listColumns + " FROM catalog.institutions"
+	geoSet := f.Lat != nil && f.Lng != nil
+	if geoSet && f.RadiusKm != nil {
+		args = append(args, *f.Lng, *f.Lat, *f.RadiusKm*1000)
+		lngN, latN, radiusN := len(args)-2, len(args)-1, len(args)
+		conditions = append(conditions, fmt.Sprintf(
+			"ST_DWithin(geo, ST_MakePoint($%d,$%d)::geography, $%d)", lngN, latN, radiusN,
+		))
+	}
+
+	// distanceExpr — вычисляемая колонка расстояния в SELECT. При отсутствии гео в фильтре
+	// $n/$n+1 всё равно попадут в args, но выражение всегда возвращает NULL (CASE WHEN),
+	// поэтому Scan в *float64 естественно даёт nil — контракт DistanceM (см. domain.Institution).
+	distanceExpr := "NULL::float8"
+	if geoSet {
+		args = append(args, *f.Lng, *f.Lat)
+		lngN, latN := len(args)-1, len(args)
+		distanceExpr = fmt.Sprintf("ST_Distance(geo, ST_MakePoint($%d,$%d)::geography)", lngN, latN)
+	}
+
+	query := "SELECT " + listColumns + ", " + distanceExpr + " FROM catalog.institutions"
 	if len(conditions) > 0 {
 		query += " WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	switch f.Sort {
+	case "price_asc":
+		query += " ORDER BY price ASC NULLS LAST, id"
+	case "score":
+		query += " ORDER BY rating_avg DESC NULLS LAST, id"
+	default:
+		if geoSet {
+			args = append(args, *f.Lng, *f.Lat)
+			lngN, latN := len(args)-1, len(args)
+			query += fmt.Sprintf(" ORDER BY geo <-> ST_MakePoint($%d,$%d)::geography, id", lngN, latN)
+		}
 	}
 
 	rows, err := r.db.Query(ctx, query, args...)
@@ -179,8 +210,8 @@ func nonNilStrings(s []string) []string {
 	return s
 }
 
-// scanInstitution сканирует одну строку catalog.institutions (в порядке listColumns)
-// в domain.Institution.
+// scanInstitution сканирует одну строку catalog.institutions (в порядке listColumns,
+// плюс вычисляемая колонка distance последней) в domain.Institution.
 func scanInstitution(rows pgx.Rows) (*domain.Institution, error) {
 	var (
 		id                                         uuid.UUID
@@ -203,6 +234,7 @@ func scanInstitution(rows pgx.Rows) (*domain.Institution, error) {
 		ratingAvg                                  *float64
 		reviewCount                                int
 		createdAt, updatedAt                       time.Time
+		distanceM                                  *float64
 	)
 
 	if err := rows.Scan(
@@ -213,6 +245,7 @@ func scanInstitution(rows pgx.Rows) (*domain.Institution, error) {
 		&discountAvailable, &discountType, &discountDetails, &verified,
 		&moderationStatus, &plan, &planExpiresAt, &founded, &studentsCount,
 		&ratingAvg, &reviewCount, &createdAt, &updatedAt,
+		&distanceM,
 	); err != nil {
 		return nil, err
 	}
@@ -267,6 +300,7 @@ func scanInstitution(rows pgx.Rows) (*domain.Institution, error) {
 	inst.ReviewCount = reviewCount
 	inst.CreatedAt = createdAt
 	inst.UpdatedAt = updatedAt
+	inst.DistanceM = distanceM
 
 	return inst, nil
 }
