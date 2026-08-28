@@ -3,6 +3,7 @@ package postgres
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/abdulhalim/eduhub/backend/internal/catalog/domain"
+	"github.com/abdulhalim/eduhub/backend/internal/platform/apperr"
 )
 
 // querier — минимальный интерфейс доступа к БД, которому удовлетворяют и *pgxpool.Pool,
@@ -45,8 +47,49 @@ const listColumns = `
 	rating_avg, review_count, created_at, updated_at
 `
 
-// List возвращает институции, удовлетворяющие фильтру f. Без пагинации (задача 23).
-func (r *InstitutionRepo) List(ctx context.Context, f domain.Filter) ([]domain.Institution, error) {
+// cursorPayload — непрозрачное содержимое курсора keyset-пагинации, сериализуется в
+// base64(JSON) и не должно интерпретироваться клиентом.
+type cursorPayload struct {
+	Sort      string  `json:"sort"`
+	LastValue float64 `json:"last_value"` // цена или rating_avg — оба помещаются в float64
+	LastID    string  `json:"last_id"`    // uuid.String()
+}
+
+// encodeCursor сериализует позицию последнего элемента страницы в непрозрачный курсор.
+func encodeCursor(sort string, lastValue float64, lastID uuid.UUID) string {
+	raw, _ := json.Marshal(cursorPayload{Sort: sort, LastValue: lastValue, LastID: lastID.String()})
+	return base64.StdEncoding.EncodeToString(raw)
+}
+
+// decodeCursor разбирает непрозрачный курсор обратно в cursorPayload. Любая ошибка формата
+// возвращается как доменная apperr.Invalid — курсор приходит от клиента, не должен приводить
+// к панике/500.
+func decodeCursor(raw string) (cursorPayload, error) {
+	invalid := func() (cursorPayload, error) {
+		return cursorPayload{}, apperr.Invalid(
+			map[string]string{"cursor": "некорректный курсор пагинации"},
+			"курсор не удалось разобрать",
+		)
+	}
+
+	data, err := base64.StdEncoding.DecodeString(raw)
+	if err != nil {
+		return invalid()
+	}
+
+	var payload cursorPayload
+	if err := json.Unmarshal(data, &payload); err != nil {
+		return invalid()
+	}
+	if payload.Sort == "" || payload.LastID == "" {
+		return invalid()
+	}
+
+	return payload, nil
+}
+
+// List возвращает институции, удовлетворяющие фильтру f, с keyset-пагинацией по f.Cursor/f.Limit.
+func (r *InstitutionRepo) List(ctx context.Context, f domain.Filter) (domain.ListResult, error) {
 	var conditions []string
 	var args []any
 
@@ -93,6 +136,38 @@ func (r *InstitutionRepo) List(ctx context.Context, f domain.Filter) ([]domain.I
 		addCond("verified = $%d", *f.Verified)
 	}
 
+	if f.Cursor != nil && *f.Cursor != "" {
+		payload, err := decodeCursor(*f.Cursor)
+		if err != nil {
+			return domain.ListResult{}, err
+		}
+		if payload.Sort != f.Sort {
+			return domain.ListResult{}, apperr.Invalid(
+				map[string]string{"cursor": "sort не совпадает с текущим запросом"},
+				"курсор выдан для другого значения sort",
+			)
+		}
+
+		lastID, err := uuid.Parse(payload.LastID)
+		if err != nil {
+			return domain.ListResult{}, apperr.Invalid(
+				map[string]string{"cursor": "некорректный курсор пагинации"},
+				"курсор содержит некорректный id",
+			)
+		}
+
+		switch f.Sort {
+		case "price_asc":
+			args = append(args, int(payload.LastValue), lastID)
+			valN, idN := len(args)-1, len(args)
+			conditions = append(conditions, fmt.Sprintf("(price, id) > ($%d, $%d)", valN, idN))
+		case "score":
+			args = append(args, payload.LastValue, lastID)
+			valN, idN := len(args)-1, len(args)
+			conditions = append(conditions, fmt.Sprintf("(rating_avg, id) < ($%d, $%d)", valN, idN))
+		}
+	}
+
 	geoSet := f.Lat != nil && f.Lng != nil
 	if geoSet && f.RadiusKm != nil {
 		args = append(args, *f.Lng, *f.Lat, *f.RadiusKm*1000)
@@ -130,9 +205,17 @@ func (r *InstitutionRepo) List(ctx context.Context, f domain.Filter) ([]domain.I
 		}
 	}
 
+	// LIMIT f.Limit+1 — запрашиваем на одну строку больше, чтобы узнать, есть ли следующая
+	// страница, без отдельного COUNT-запроса. f.Limit==0 (не нормализован вызывающей стороной,
+	// как в прямых репозиторных тестах без пагинации) — лимит не применяется, ведём себя как
+	// до задачи 23.
+	if f.Limit > 0 {
+		query += fmt.Sprintf(" LIMIT %d", f.Limit+1)
+	}
+
 	rows, err := r.db.Query(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("postgres: list institutions: %w", err)
+		return domain.ListResult{}, fmt.Errorf("postgres: list institutions: %w", err)
 	}
 	defer rows.Close()
 
@@ -140,15 +223,34 @@ func (r *InstitutionRepo) List(ctx context.Context, f domain.Filter) ([]domain.I
 	for rows.Next() {
 		inst, err := scanInstitution(rows)
 		if err != nil {
-			return nil, fmt.Errorf("postgres: scan institution: %w", err)
+			return domain.ListResult{}, fmt.Errorf("postgres: scan institution: %w", err)
 		}
 		out = append(out, *inst)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("postgres: list institutions rows: %w", err)
+		return domain.ListResult{}, fmt.Errorf("postgres: list institutions rows: %w", err)
 	}
 
-	return out, nil
+	result := domain.ListResult{Items: out}
+	if f.Limit > 0 && len(out) > f.Limit {
+		result.Items = out[:f.Limit]
+
+		last := result.Items[len(result.Items)-1]
+		switch f.Sort {
+		case "price_asc":
+			if last.Price != nil {
+				cursor := encodeCursor(f.Sort, float64(*last.Price), last.ID)
+				result.NextCursor = &cursor
+			}
+		case "score":
+			if last.RatingAvg != nil {
+				cursor := encodeCursor(f.Sort, *last.RatingAvg, last.ID)
+				result.NextCursor = &cursor
+			}
+		}
+	}
+
+	return result, nil
 }
 
 // bilingualJSON — форма JSONB-колонок {ru,tg} на границе БД.

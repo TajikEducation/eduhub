@@ -10,5 +10,5 @@ import (
 
 // InstitutionRepo — порт в БД для каталога институций. Реализация — internal/catalog/repo/postgres.
 type InstitutionRepo interface {
-	List(ctx context.Context, f domain.Filter) ([]domain.Institution, error)
+	List(ctx context.Context, f domain.Filter) (domain.ListResult, error)
 }

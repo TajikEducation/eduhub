@@ -31,6 +31,12 @@ type Filter struct {
 	Statuses []string
 }
 
+// ListResult — результат List: страница институций + опциональный курсор следующей страницы.
+type ListResult struct {
+	Items      []Institution
+	NextCursor *string
+}
+
 const (
 	defaultLimit = 20
 	maxLimit     = 50

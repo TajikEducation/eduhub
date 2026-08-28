@@ -98,7 +98,8 @@ func TestListInstitutions(t *testing.T) {
 	repo := postgres.New(tx)
 
 	t.Run("а) базовый фильтр approved возвращает только 1,2,3", func(t *testing.T) {
-		got, err := repo.List(ctx, domain.Filter{Statuses: []string{"approved"}})
+		result, err := repo.List(ctx, domain.Filter{Statuses: []string{"approved"}})
+		got := result.Items
 		if err != nil {
 			t.Fatalf("List() вернул ошибку: %v", err)
 		}
@@ -109,7 +110,8 @@ func TestListInstitutions(t *testing.T) {
 	})
 
 	t.Run("б) Region=sughd возвращает только Лицей №5", func(t *testing.T) {
-		got, err := repo.List(ctx, domain.Filter{Statuses: []string{"approved"}, Region: p("sughd")})
+		result, err := repo.List(ctx, domain.Filter{Statuses: []string{"approved"}, Region: p("sughd")})
+		got := result.Items
 		if err != nil {
 			t.Fatalf("List() вернул ошибку: %v", err)
 		}
@@ -120,7 +122,8 @@ func TestListInstitutions(t *testing.T) {
 	})
 
 	t.Run("в) Types=[school] исключает kindergarten", func(t *testing.T) {
-		got, err := repo.List(ctx, domain.Filter{Statuses: []string{"approved"}, Types: []string{"school"}})
+		result, err := repo.List(ctx, domain.Filter{Statuses: []string{"approved"}, Types: []string{"school"}})
+		got := result.Items
 		if err != nil {
 			t.Fatalf("List() вернул ошибку: %v", err)
 		}
@@ -131,7 +134,8 @@ func TestListInstitutions(t *testing.T) {
 	})
 
 	t.Run("г) Q=гулис находит по подстроке в ru-названии", func(t *testing.T) {
-		got, err := repo.List(ctx, domain.Filter{Statuses: []string{"approved"}, Q: p("гулис")})
+		result, err := repo.List(ctx, domain.Filter{Statuses: []string{"approved"}, Q: p("гулис")})
+		got := result.Items
 		if err != nil {
 			t.Fatalf("List() вернул ошибку: %v", err)
 		}
@@ -142,7 +146,8 @@ func TestListInstitutions(t *testing.T) {
 	})
 
 	t.Run("д) MinRating=4.5 исключает NULL и более низкий рейтинг", func(t *testing.T) {
-		got, err := repo.List(ctx, domain.Filter{Statuses: []string{"approved"}, MinRating: p(4.5)})
+		result, err := repo.List(ctx, domain.Filter{Statuses: []string{"approved"}, MinRating: p(4.5)})
+		got := result.Items
 		if err != nil {
 			t.Fatalf("List() вернул ошибку: %v", err)
 		}
@@ -153,7 +158,8 @@ func TestListInstitutions(t *testing.T) {
 	})
 
 	t.Run("е) Curriculum=[bilingual,stem] пересечение", func(t *testing.T) {
-		got, err := repo.List(ctx, domain.Filter{Statuses: []string{"approved"}, Curriculum: []string{"bilingual", "stem"}})
+		result, err := repo.List(ctx, domain.Filter{Statuses: []string{"approved"}, Curriculum: []string{"bilingual", "stem"}})
+		got := result.Items
 		if err != nil {
 			t.Fatalf("List() вернул ошибку: %v", err)
 		}
@@ -164,7 +170,8 @@ func TestListInstitutions(t *testing.T) {
 	})
 
 	t.Run("ж) Discount=true возвращает только Гулистон", func(t *testing.T) {
-		got, err := repo.List(ctx, domain.Filter{Statuses: []string{"approved"}, Discount: p(true)})
+		result, err := repo.List(ctx, domain.Filter{Statuses: []string{"approved"}, Discount: p(true)})
+		got := result.Items
 		if err != nil {
 			t.Fatalf("List() вернул ошибку: %v", err)
 		}
@@ -210,7 +217,8 @@ func TestListInstitutions_NullableArrayFields(t *testing.T) {
 
 	repo := postgres.New(tx)
 
-	got, err := repo.List(ctx, domain.Filter{Statuses: []string{"approved"}, Q: p("Без массивов")})
+	result, err := repo.List(ctx, domain.Filter{Statuses: []string{"approved"}, Q: p("Без массивов")})
+	got := result.Items
 	if err != nil {
 		t.Fatalf("List() вернул ошибку: %v", err)
 	}

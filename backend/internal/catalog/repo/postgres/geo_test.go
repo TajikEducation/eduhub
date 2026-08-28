@@ -68,10 +68,11 @@ func TestListGeo(t *testing.T) {
 	repo := postgres.New(tx)
 
 	t.Run("а) RadiusKm=10 возвращает только Душанбе-кластер (1,2)", func(t *testing.T) {
-		got, err := repo.List(ctx, domain.Filter{
+		result, err := repo.List(ctx, domain.Filter{
 			Statuses: []string{"approved"},
 			Lat:      p(38.56), Lng: p(68.78), RadiusKm: p(10.0),
 		})
+		got := result.Items
 		if err != nil {
 			t.Fatalf("List() вернул ошибку: %v", err)
 		}
@@ -82,10 +83,11 @@ func TestListGeo(t *testing.T) {
 	})
 
 	t.Run("б) RadiusKm=500 возвращает все 4", func(t *testing.T) {
-		got, err := repo.List(ctx, domain.Filter{
+		result, err := repo.List(ctx, domain.Filter{
 			Statuses: []string{"approved"},
 			Lat:      p(38.56), Lng: p(68.78), RadiusKm: p(500.0),
 		})
+		got := result.Items
 		if err != nil {
 			t.Fatalf("List() вернул ошибку: %v", err)
 		}
@@ -99,10 +101,11 @@ func TestListGeo(t *testing.T) {
 	})
 
 	t.Run("в) DistanceM заполнен и монотонно не убывает (сортировка по дистанции по умолчанию)", func(t *testing.T) {
-		got, err := repo.List(ctx, domain.Filter{
+		result, err := repo.List(ctx, domain.Filter{
 			Statuses: []string{"approved"},
 			Lat:      p(38.56), Lng: p(68.78), RadiusKm: p(500.0),
 		})
+		got := result.Items
 		if err != nil {
 			t.Fatalf("List() вернул ошибку: %v", err)
 		}
@@ -123,10 +126,11 @@ func TestListGeo(t *testing.T) {
 	})
 
 	t.Run("г) без Lat/Lng DistanceM == nil у всех", func(t *testing.T) {
-		got, err := repo.List(ctx, domain.Filter{
+		result, err := repo.List(ctx, domain.Filter{
 			Statuses: []string{"approved"},
 			Region:   p("dushanbe"),
 		})
+		got := result.Items
 		if err != nil {
 			t.Fatalf("List() вернул ошибку: %v", err)
 		}
@@ -141,10 +145,11 @@ func TestListGeo(t *testing.T) {
 	})
 
 	t.Run("д1) Sort=price_asc — по возрастанию цены", func(t *testing.T) {
-		got, err := repo.List(ctx, domain.Filter{
+		result, err := repo.List(ctx, domain.Filter{
 			Statuses: []string{"approved"},
 			Sort:     "price_asc",
 		})
+		got := result.Items
 		if err != nil {
 			t.Fatalf("List() вернул ошибку: %v", err)
 		}
@@ -153,10 +158,11 @@ func TestListGeo(t *testing.T) {
 	})
 
 	t.Run("д2) Sort=score — по убыванию рейтинга, NULL последним", func(t *testing.T) {
-		got, err := repo.List(ctx, domain.Filter{
+		result, err := repo.List(ctx, domain.Filter{
 			Statuses: []string{"approved"},
 			Sort:     "score",
 		})
+		got := result.Items
 		if err != nil {
 			t.Fatalf("List() вернул ошибку: %v", err)
 		}
