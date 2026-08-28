@@ -24,6 +24,11 @@ type Filter struct {
 	RadiusKm     *float64
 	Limit        int
 	Cursor       *string
+
+	// Statuses — фильтр по moderation_status. НЕ часть публичного HTTP-контракта (задача 26
+	// transport/http не должен парсить/устанавливать это поле из query-параметров клиента) —
+	// подставляется только usecase-слоем (задача 25: сервис всегда форсирует Statuses=["approved"]).
+	Statuses []string
 }
 
 const (
