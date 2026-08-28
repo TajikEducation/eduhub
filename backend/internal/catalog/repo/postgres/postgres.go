@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -251,6 +252,420 @@ func (r *InstitutionRepo) List(ctx context.Context, f domain.Filter) (domain.Lis
 	}
 
 	return result, nil
+}
+
+// getByIDQuery — карточка институции одним запросом: скалярные колонки catalog.institutions
+// (те же, что listColumns) + 6 JSON-агрегатов сателлитных коллекций через LATERAL-подобные
+// подзапросы (json_agg(row_to_json(...))). ORDER BY внутри json_agg(...) — единственное место,
+// где он строго обязателен для стабильного порядка; во вложенном SELECT дублируется для ясности.
+const getByIDQuery = `
+	SELECT ` + listColumns + `,
+		(SELECT COALESCE(json_agg(row_to_json(t) ORDER BY t.created_at, t.id), '[]'::json)
+		 FROM (
+			SELECT id, name, role_type, role_label, subject, photo_url, exp, bio, education, email, phone, created_at
+			FROM catalog.institution_staff
+			WHERE institution_id = i.id
+			ORDER BY created_at, id
+		 ) t
+		) AS staff,
+		(SELECT COALESCE(json_agg(row_to_json(t) ORDER BY t.created_at, t.id), '[]'::json)
+		 FROM (
+			SELECT id, owner_type, owner_id, title, year, category, description, links, created_at
+			FROM catalog.achievements
+			WHERE owner_type = 'institution' AND owner_id = i.id
+			ORDER BY created_at, id
+		 ) t
+		) AS achievements,
+		(SELECT COALESCE(json_agg(row_to_json(t) ORDER BY t.sort_order, t.created_at, t.id), '[]'::json)
+		 FROM (
+			SELECT id, s3_key, label, sort_order, created_at
+			FROM catalog.institution_gallery
+			WHERE institution_id = i.id
+			ORDER BY sort_order, created_at, id
+		 ) t
+		) AS gallery,
+		(SELECT COALESCE(json_agg(row_to_json(t) ORDER BY t.created_at, t.id), '[]'::json)
+		 FROM (
+			SELECT id, name, photo_url, grad_year, now_label, created_at
+			FROM catalog.institution_alumni
+			WHERE institution_id = i.id
+			ORDER BY created_at, id
+		 ) t
+		) AS alumni,
+		(SELECT COALESCE(json_agg(row_to_json(t) ORDER BY t.sort_order, t.created_at, t.id), '[]'::json)
+		 FROM (
+			SELECT id, type, label, areas, cost, cost_period, sort_order, created_at
+			FROM catalog.institution_transport_routes
+			WHERE institution_id = i.id
+			ORDER BY sort_order, created_at, id
+		 ) t
+		) AS transport_routes,
+		(SELECT COALESCE(json_agg(row_to_json(t) ORDER BY t.sort_order, t.created_at, t.id), '[]'::json)
+		 FROM (
+			SELECT id, meal_type, label, cost, cost_period, halal, sort_order, created_at
+			FROM catalog.institution_meal_plans
+			WHERE institution_id = i.id
+			ORDER BY sort_order, created_at, id
+		 ) t
+		) AS meal_plans
+	FROM catalog.institutions i
+	WHERE i.id = $1
+`
+
+// GetByID возвращает полную карточку институции (скаляры + 6 сателлитных коллекций) одним
+// SQL-запросом. apperr.ErrNotFound — если институция с id не найдена.
+func (r *InstitutionRepo) GetByID(ctx context.Context, id uuid.UUID) (domain.Institution, error) {
+	row := r.db.QueryRow(ctx, getByIDQuery, id)
+
+	inst, err := scanInstitutionFull(row)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.Institution{}, apperr.NotFound("institution", id.String())
+	}
+	if err != nil {
+		return domain.Institution{}, fmt.Errorf("postgres: get institution by id: %w", err)
+	}
+
+	return *inst, nil
+}
+
+// bilingualWire — форма вложенного JSON-объекта {ru,tg} внутри агрегатов сателлитных коллекций
+// (не путать с bilingualJSON, который разбирает колонки самой catalog.institutions).
+type bilingualWire struct {
+	RU string `json:"ru"`
+	TG string `json:"tg"`
+}
+
+func (b bilingualWire) toDomain() domain.Bilingual {
+	return domain.Bilingual{RU: b.RU, TG: b.TG}
+}
+
+// bilingualWireSlice конвертирует срез вложенных {ru,tg}-объектов в domain.Bilingual.
+func bilingualWireSlice(in []bilingualWire) []domain.Bilingual {
+	out := make([]domain.Bilingual, len(in))
+	for i, v := range in {
+		out[i] = v.toDomain()
+	}
+	return out
+}
+
+// bilingualWirePtr конвертирует nullable вложенный {ru,tg}-объект в *domain.Bilingual.
+func bilingualWirePtr(in *bilingualWire) *domain.Bilingual {
+	if in == nil {
+		return nil
+	}
+	b := in.toDomain()
+	return &b
+}
+
+// staffWire — форма одного элемента агрегата staff.
+type staffWire struct {
+	ID        uuid.UUID       `json:"id"`
+	Name      bilingualWire   `json:"name"`
+	RoleType  string          `json:"role_type"`
+	RoleLabel bilingualWire   `json:"role_label"`
+	Subject   *bilingualWire  `json:"subject"`
+	PhotoURL  *string         `json:"photo_url"`
+	Exp       *string         `json:"exp"`
+	Bio       *bilingualWire  `json:"bio"`
+	Education []bilingualWire `json:"education"`
+	Email     *string         `json:"email"`
+	Phone     *string         `json:"phone"`
+	CreatedAt time.Time       `json:"created_at"`
+}
+
+func (w staffWire) toDomain() domain.StaffMember {
+	return domain.StaffMember{
+		ID:        w.ID,
+		Name:      w.Name.toDomain(),
+		RoleType:  w.RoleType,
+		RoleLabel: w.RoleLabel.toDomain(),
+		Subject:   bilingualWirePtr(w.Subject),
+		PhotoURL:  w.PhotoURL,
+		Exp:       w.Exp,
+		Bio:       bilingualWirePtr(w.Bio),
+		Education: bilingualWireSlice(w.Education),
+		Email:     w.Email,
+		Phone:     w.Phone,
+		CreatedAt: w.CreatedAt,
+	}
+}
+
+// achievementLinkWire — форма одной ссылки во вложенном JSON-массиве links.
+type achievementLinkWire struct {
+	Label string `json:"label"`
+	URL   string `json:"url"`
+}
+
+// achievementWire — форма одного элемента агрегата achievements.
+type achievementWire struct {
+	ID          uuid.UUID             `json:"id"`
+	OwnerType   string                `json:"owner_type"`
+	OwnerID     uuid.UUID             `json:"owner_id"`
+	Title       bilingualWire         `json:"title"`
+	Year        int                   `json:"year"`
+	Category    string                `json:"category"`
+	Description bilingualWire         `json:"description"`
+	Links       []achievementLinkWire `json:"links"`
+	CreatedAt   time.Time             `json:"created_at"`
+}
+
+func (w achievementWire) toDomain() domain.Achievement {
+	links := make([]domain.AchievementLink, len(w.Links))
+	for i, l := range w.Links {
+		links[i] = domain.AchievementLink{Label: l.Label, URL: l.URL}
+	}
+	return domain.Achievement{
+		ID:          w.ID,
+		OwnerType:   w.OwnerType,
+		OwnerID:     w.OwnerID,
+		Title:       w.Title.toDomain(),
+		Year:        w.Year,
+		Category:    w.Category,
+		Description: w.Description.toDomain(),
+		Links:       links,
+		CreatedAt:   w.CreatedAt,
+	}
+}
+
+// galleryItemWire — форма одного элемента агрегата gallery.
+type galleryItemWire struct {
+	ID        uuid.UUID      `json:"id"`
+	S3Key     string         `json:"s3_key"`
+	Label     *bilingualWire `json:"label"`
+	SortOrder int            `json:"sort_order"`
+	CreatedAt time.Time      `json:"created_at"`
+}
+
+func (w galleryItemWire) toDomain() domain.GalleryItem {
+	return domain.GalleryItem{
+		ID:        w.ID,
+		S3Key:     w.S3Key,
+		Label:     bilingualWirePtr(w.Label),
+		SortOrder: w.SortOrder,
+		CreatedAt: w.CreatedAt,
+	}
+}
+
+// alumnusWire — форма одного элемента агрегата alumni.
+type alumnusWire struct {
+	ID        uuid.UUID      `json:"id"`
+	Name      bilingualWire  `json:"name"`
+	PhotoURL  *string        `json:"photo_url"`
+	GradYear  int            `json:"grad_year"`
+	NowLabel  *bilingualWire `json:"now_label"`
+	CreatedAt time.Time      `json:"created_at"`
+}
+
+func (w alumnusWire) toDomain() domain.Alumnus {
+	return domain.Alumnus{
+		ID:        w.ID,
+		Name:      w.Name.toDomain(),
+		PhotoURL:  w.PhotoURL,
+		GradYear:  w.GradYear,
+		NowLabel:  bilingualWirePtr(w.NowLabel),
+		CreatedAt: w.CreatedAt,
+	}
+}
+
+// transportRouteWire — форма одного элемента агрегата transport_routes.
+type transportRouteWire struct {
+	ID         uuid.UUID       `json:"id"`
+	Type       string          `json:"type"`
+	Label      *bilingualWire  `json:"label"`
+	Areas      []bilingualWire `json:"areas"`
+	Cost       *int            `json:"cost"`
+	CostPeriod string          `json:"cost_period"`
+	SortOrder  int             `json:"sort_order"`
+	CreatedAt  time.Time       `json:"created_at"`
+}
+
+func (w transportRouteWire) toDomain() domain.TransportRoute {
+	return domain.TransportRoute{
+		ID:         w.ID,
+		Type:       w.Type,
+		Label:      bilingualWirePtr(w.Label),
+		Areas:      bilingualWireSlice(w.Areas),
+		Cost:       w.Cost,
+		CostPeriod: w.CostPeriod,
+		SortOrder:  w.SortOrder,
+		CreatedAt:  w.CreatedAt,
+	}
+}
+
+// mealPlanWire — форма одного элемента агрегата meal_plans.
+type mealPlanWire struct {
+	ID         uuid.UUID      `json:"id"`
+	MealType   string         `json:"meal_type"`
+	Label      *bilingualWire `json:"label"`
+	Cost       *int           `json:"cost"`
+	CostPeriod string         `json:"cost_period"`
+	Halal      *bool          `json:"halal"`
+	SortOrder  int            `json:"sort_order"`
+	CreatedAt  time.Time      `json:"created_at"`
+}
+
+func (w mealPlanWire) toDomain() domain.MealPlan {
+	return domain.MealPlan{
+		ID:         w.ID,
+		MealType:   w.MealType,
+		Label:      bilingualWirePtr(w.Label),
+		Cost:       w.Cost,
+		CostPeriod: w.CostPeriod,
+		Halal:      w.Halal,
+		SortOrder:  w.SortOrder,
+		CreatedAt:  w.CreatedAt,
+	}
+}
+
+// scanInstitutionFull сканирует одну строку getByIDQuery (скаляры catalog.institutions
+// в порядке listColumns, плюс 6 JSON-агрегатов сателлитных коллекций последними) в
+// domain.Institution. pgx.Row (не pgx.Rows) — .Scan(...) сразу, без .Next().
+func scanInstitutionFull(row pgx.Row) (*domain.Institution, error) {
+	var (
+		id                                         uuid.UUID
+		nameRaw, cityRaw, descRaw, addrRaw         []byte
+		socialsRaw, tagRaw                         []byte
+		region                                     string
+		district                                   *string
+		lat, lng                                   float64
+		locationLandmarks, phone, email, website   *string
+		coverPhotoS3Key, ageRange, licenseNo       *string
+		types, languages, programLevel, curriculum []string
+		price                                      *int
+		discountAvailable                          bool
+		discountType                               []string
+		discountDetails                            *string
+		verified                                   bool
+		moderationStatus, plan                     string
+		planExpiresAt                              *time.Time
+		founded, studentsCount                     *int
+		ratingAvg                                  *float64
+		reviewCount                                int
+		createdAt, updatedAt                       time.Time
+
+		staffRaw, achievementsRaw, galleryRaw   []byte
+		alumniRaw, transportRoutesRaw, mealsRaw []byte
+	)
+
+	if err := row.Scan(
+		&id, &nameRaw, &types, &region, &cityRaw, &district, &descRaw, &addrRaw,
+		&lat, &lng, &locationLandmarks,
+		&phone, &email, &website, &socialsRaw, &coverPhotoS3Key, &ageRange, &tagRaw,
+		&licenseNo, &languages, &programLevel, &curriculum, &price,
+		&discountAvailable, &discountType, &discountDetails, &verified,
+		&moderationStatus, &plan, &planExpiresAt, &founded, &studentsCount,
+		&ratingAvg, &reviewCount, &createdAt, &updatedAt,
+		&staffRaw, &achievementsRaw, &galleryRaw, &alumniRaw, &transportRoutesRaw, &mealsRaw,
+	); err != nil {
+		return nil, err
+	}
+
+	name, err := scanBilingual(nameRaw)
+	if err != nil {
+		return nil, fmt.Errorf("name: %w", err)
+	}
+
+	inst := domain.NewInstitution(id, name, region)
+	inst.Types = types
+
+	if inst.City, err = scanBilingualPtr(cityRaw); err != nil {
+		return nil, fmt.Errorf("city: %w", err)
+	}
+	inst.District = district
+	if inst.Description, err = scanBilingualPtr(descRaw); err != nil {
+		return nil, fmt.Errorf("description: %w", err)
+	}
+	if inst.Address, err = scanBilingualPtr(addrRaw); err != nil {
+		return nil, fmt.Errorf("address: %w", err)
+	}
+	inst.Lat = lat
+	inst.Lng = lng
+	inst.LocationLandmarks = locationLandmarks
+	inst.Phone = phone
+	inst.Email = email
+	inst.Website = website
+	if inst.Socials, err = scanSocials(socialsRaw); err != nil {
+		return nil, fmt.Errorf("socials: %w", err)
+	}
+	inst.CoverPhotoS3Key = coverPhotoS3Key
+	inst.AgeRange = ageRange
+	if inst.Tag, err = scanBilingualPtr(tagRaw); err != nil {
+		return nil, fmt.Errorf("tag: %w", err)
+	}
+	inst.LicenseNo = licenseNo
+	inst.Languages = nonNilStrings(languages)
+	inst.ProgramLevel = nonNilStrings(programLevel)
+	inst.Curriculum = nonNilStrings(curriculum)
+	inst.Price = price
+	inst.DiscountAvailable = discountAvailable
+	inst.DiscountType = nonNilStrings(discountType)
+	inst.DiscountDetails = discountDetails
+	inst.Verified = verified
+	inst.ModerationStatus = moderationStatus
+	inst.Plan = plan
+	inst.PlanExpiresAt = planExpiresAt
+	inst.Founded = founded
+	inst.StudentsCount = studentsCount
+	inst.RatingAvg = ratingAvg
+	inst.ReviewCount = reviewCount
+	inst.CreatedAt = createdAt
+	inst.UpdatedAt = updatedAt
+
+	var staffWires []staffWire
+	if err := json.Unmarshal(staffRaw, &staffWires); err != nil {
+		return nil, fmt.Errorf("staff: %w", err)
+	}
+	inst.Staff = make([]domain.StaffMember, len(staffWires))
+	for i, w := range staffWires {
+		inst.Staff[i] = w.toDomain()
+	}
+
+	var achievementWires []achievementWire
+	if err := json.Unmarshal(achievementsRaw, &achievementWires); err != nil {
+		return nil, fmt.Errorf("achievements: %w", err)
+	}
+	inst.Achievements = make([]domain.Achievement, len(achievementWires))
+	for i, w := range achievementWires {
+		inst.Achievements[i] = w.toDomain()
+	}
+
+	var galleryWires []galleryItemWire
+	if err := json.Unmarshal(galleryRaw, &galleryWires); err != nil {
+		return nil, fmt.Errorf("gallery: %w", err)
+	}
+	inst.Gallery = make([]domain.GalleryItem, len(galleryWires))
+	for i, w := range galleryWires {
+		inst.Gallery[i] = w.toDomain()
+	}
+
+	var alumniWires []alumnusWire
+	if err := json.Unmarshal(alumniRaw, &alumniWires); err != nil {
+		return nil, fmt.Errorf("alumni: %w", err)
+	}
+	inst.Alumni = make([]domain.Alumnus, len(alumniWires))
+	for i, w := range alumniWires {
+		inst.Alumni[i] = w.toDomain()
+	}
+
+	var transportWires []transportRouteWire
+	if err := json.Unmarshal(transportRoutesRaw, &transportWires); err != nil {
+		return nil, fmt.Errorf("transport_routes: %w", err)
+	}
+	inst.TransportRoutes = make([]domain.TransportRoute, len(transportWires))
+	for i, w := range transportWires {
+		inst.TransportRoutes[i] = w.toDomain()
+	}
+
+	var mealWires []mealPlanWire
+	if err := json.Unmarshal(mealsRaw, &mealWires); err != nil {
+		return nil, fmt.Errorf("meal_plans: %w", err)
+	}
+	inst.MealPlans = make([]domain.MealPlan, len(mealWires))
+	for i, w := range mealWires {
+		inst.MealPlans[i] = w.toDomain()
+	}
+
+	return inst, nil
 }
 
 // bilingualJSON — форма JSONB-колонок {ru,tg} на границе БД.
