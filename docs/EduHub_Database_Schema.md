@@ -212,13 +212,6 @@ SRS §7, сущность `Child` — минимальная привязка р
 | `program_level` | TEXT[] | да | `NULL` | ступень/программа (FR-28): для школ начальная/основная/средняя, для вузов бакалавриат/магистратура/докторантура |
 | `curriculum` | TEXT[] | да | `NULL` | `state`\|`bilingual`\|`international`\|`stem` |
 | `price` | INT | да | `NULL` | примерная стоимость |
-| `transport_type` | TEXT | да | `NULL` | `own_bus`\|`minibus`\|`taxi`\|`parent_coop`\|`none` |
-| `transport_cost` | INT | да | `NULL` | — |
-| `transport_areas` | TEXT[] | да | `NULL` | охватываемые районы |
-| `meals_available` | TEXT | да | `NULL` | `yes`\|`no`\|`bring_own` |
-| `meals_type` | TEXT | да | `NULL` | `hot`\|`breakfast`\|`buffet`\|`none` |
-| `meals_cost` | INT | да | `NULL` | — |
-| `meals_halal` | BOOL | да | `NULL` | — |
 | `discount_available` | BOOL | нет | `false` | FR-26 |
 | `discount_type` | TEXT[] | да | `NULL` | `needs_based`\|`merit_or_competition`\|`large_family`\|`other` |
 | `discount_details` | TEXT | да | `NULL` | разовое текстовое поле |
@@ -233,7 +226,7 @@ SRS §7, сущность `Child` — минимальная привязка р
 | `created_at` | TIMESTAMPTZ | нет | `now()` | — |
 | `updated_at` | TIMESTAMPTZ | нет | `now()` | инкрементируется при любой правке — основа ETag (задача 28) и оптимистической блокировки (E3.4) |
 
-**Связи:** 1—N `catalog.institution_owners`, `institution_staff`, `institution_gallery`, `institution_alumni`, `news_articles`, `institution_metrics`, `institution_owner_verifications`; 1—N `auth.children`, `auth.employment_claims` (принимающая сторона кросс-схемного FK); referenced by `reviews.reviews`, `communications.conversations`, `communications.vacancies`.
+**Связи:** 1—N `catalog.institution_owners`, `institution_staff`, `institution_gallery`, `institution_alumni`, `news_articles`, `institution_metrics`, `institution_owner_verifications`, `institution_transport_routes`, `institution_meal_plans`; 1—N `auth.children`, `auth.employment_claims` (принимающая сторона кросс-схемного FK); referenced by `reviews.reviews`, `communications.conversations`, `communications.vacancies`.
 **Индексы:** `GIST(geo)`; `GIN(name jsonb_path_ops)`; `GIN((name->>'ru') gin_trgm_ops)`, `GIN((name->>'tg') gin_trgm_ops)` (подстрочный поиск на обоих языках — trigram, не tsvector, см. план веха 1 задача 18); `GIN(types)`; `GIN(curriculum)`; `GIN(program_level)`; `btree(region, district)`; частичный `btree(rating_avg DESC, id) WHERE moderation_status='approved'`; частичный `btree(price) WHERE moderation_status='approved'`; частичный `UNIQUE(lower(name->>'ru'), region, district) WHERE moderation_status <> 'rejected'` (защита от двойного сабмита формы регистрации — см. E3.3 в плане; `rejected`-заявки не блокируют повторную попытку с исправленными данными).
 
 ### `catalog.institution_metrics`
@@ -340,6 +333,44 @@ SRS §7, сущность `Child` — минимальная привязка р
 | `s3_key` | TEXT | нет | — | ключ в объектном хранилище, не сам файл |
 | `label` | JSONB | да | `NULL` | `{ru,tg}` подпись |
 | `sort_order` | INT | нет | `0` | порядок для перетаскивания в кабинете (FR-07) |
+| `created_at` | TIMESTAMPTZ | нет | `now()` | — |
+
+**Связи:** N—1 `catalog.institutions`.
+**Индексы:** `btree(institution_id, sort_order)`.
+
+### `catalog.institution_transport_routes`
+
+Маршруты развозки учреждения — 1:N (institution может предлагать несколько независимых маршрутов, каждый со своей ценой/типом/районом охвата; решение зафиксировано `docs/adr/0002-institution-transport-meals-split.md`, реверс более раннего 1:1-дизайна). Отсутствие развозки — ноль строк, не специальное значение колонки.
+
+| Поле | Тип | Nullable | Default | Описание |
+|---|---|---|---|---|
+| `id` | UUID PK | нет | `gen_random_uuid()` | — |
+| `institution_id` | UUID FK→`catalog.institutions(id)` ON DELETE CASCADE | нет | — | — |
+| `type` | TEXT | нет | — | `own_bus`\|`minibus`\|`taxi`\|`parent_coop`\|`other` (CHECK) |
+| `label` | JSONB | да | `NULL` | `{ru,tg}` — свободное описание маршрута («Школьный автобус, 12 мест») |
+| `areas` | JSONB | да | `NULL` | массив `{ru,tg}` — районы охвата (нет справочника районов в проекте — тот же bilingual free-text паттерн, что и остальные `{ru,tg}`-поля) |
+| `cost` | INT | да | `NULL` | `CHECK (cost IS NULL OR cost >= 0)` |
+| `cost_period` | TEXT | нет | `'month'` | `month`\|`day`\|`trip` (CHECK) |
+| `sort_order` | INT | нет | `0` | порядок отображения |
+| `created_at` | TIMESTAMPTZ | нет | `now()` | — |
+
+**Связи:** N—1 `catalog.institutions`.
+**Индексы:** `btree(institution_id, sort_order)`.
+
+### `catalog.institution_meal_plans`
+
+Варианты питания учреждения — 1:N (та же логика, что у маршрутов транспорта: несколько независимых вариантов, каждый со своей ценой). Отсутствие питания — ноль строк.
+
+| Поле | Тип | Nullable | Default | Описание |
+|---|---|---|---|---|
+| `id` | UUID PK | нет | `gen_random_uuid()` | — |
+| `institution_id` | UUID FK→`catalog.institutions(id)` ON DELETE CASCADE | нет | — | — |
+| `meal_type` | TEXT | нет | — | `hot`\|`breakfast`\|`buffet`\|`other` (CHECK) |
+| `label` | JSONB | да | `NULL` | `{ru,tg}` — без него два плана с одинаковым `meal_type` и разной ценой неразличимы |
+| `cost` | INT | да | `NULL` | `CHECK (cost IS NULL OR cost >= 0)` |
+| `cost_period` | TEXT | нет | `'month'` | `month`\|`day` (CHECK) |
+| `halal` | BOOL | да | `NULL` | `NULL` = не указано — отличается от «явно не халяль» |
+| `sort_order` | INT | нет | `0` | — |
 | `created_at` | TIMESTAMPTZ | нет | `now()` | — |
 
 **Связи:** N—1 `catalog.institutions`.
