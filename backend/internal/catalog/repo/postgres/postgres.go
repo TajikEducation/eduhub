@@ -82,7 +82,9 @@ func decodeCursor(raw string) (cursorPayload, error) {
 	if err := json.Unmarshal(data, &payload); err != nil {
 		return invalid()
 	}
-	if payload.Sort == "" || payload.LastID == "" {
+	// payload.Sort == "" — легитимное значение (дефолтный порядок без явного sort, задача 31-bugfix),
+	// не признак поломанного курсора. Единственное обязательное поле — LastID.
+	if payload.LastID == "" {
 		return invalid()
 	}
 
@@ -166,6 +168,16 @@ func (r *InstitutionRepo) List(ctx context.Context, f domain.Filter) (domain.Lis
 			args = append(args, payload.LastValue, lastID)
 			valN, idN := len(args)-1, len(args)
 			conditions = append(conditions, fmt.Sprintf("(rating_avg, id) < ($%d, $%d)", valN, idN))
+		case "":
+			// Дефолтный порядок (без явного sort, без гео) — новые сначала по created_at.
+			// LastValue хранит created_at как unix-миллисекунды (float64 достаточно точен
+			// на этом диапазоне, в отличие от unix-наносекунд). Курсор со Sort="" сочетается
+			// с геопоиском (ORDER BY distance) остаётся отдельным известным пробелом —
+			// такая страница просто не получит NextCursor (см. ORDER BY ниже).
+			t := time.UnixMilli(int64(payload.LastValue))
+			args = append(args, t, lastID)
+			valN, idN := len(args)-1, len(args)
+			conditions = append(conditions, fmt.Sprintf("(created_at, id) < ($%d, $%d)", valN, idN))
 		}
 	}
 
@@ -203,6 +215,11 @@ func (r *InstitutionRepo) List(ctx context.Context, f domain.Filter) (domain.Lis
 			args = append(args, *f.Lng, *f.Lat)
 			lngN, latN := len(args)-1, len(args)
 			query += fmt.Sprintf(" ORDER BY geo <-> ST_MakePoint($%d,$%d)::geography, id", lngN, latN)
+		} else {
+			// Дефолтный порядок без гео — новые сначала. Без явного ORDER BY здесь LIMIT
+			// возвращал бы произвольные строки (Postgres не гарантирует порядок без ORDER
+			// BY) — это был реальный баг, не только отсутствие курсора для пагинации.
+			query += " ORDER BY created_at DESC, id"
 		}
 	}
 
@@ -246,6 +263,14 @@ func (r *InstitutionRepo) List(ctx context.Context, f domain.Filter) (domain.Lis
 		case "score":
 			if last.RatingAvg != nil {
 				cursor := encodeCursor(f.Sort, *last.RatingAvg, last.ID)
+				result.NextCursor = &cursor
+			}
+		case "":
+			// Курсор строится только для дефолтного порядка без гео (see ORDER BY выше) —
+			// геопоиск с пустым sort сортирует по расстоянию, для которого своего кейсет-условия
+			// пока нет (отдельный известный пробел, шире скоупа этого фикса).
+			if !geoSet {
+				cursor := encodeCursor(f.Sort, float64(last.CreatedAt.UnixMilli()), last.ID)
 				result.NextCursor = &cursor
 			}
 		}
