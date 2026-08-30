@@ -119,6 +119,7 @@ func splitCSV(v string) []string {
 // parseIntPtr парсит непустую строку как int, ошибка формата → apperr.Invalid по field.
 func parseIntPtr(v, field string) (*int, error) {
 	if v == "" {
+		//nolint:nilnil // nil-значение — параметр не передан, не ошибка (см. .claude/rules/go.md: *T как optional)
 		return nil, nil
 	}
 	n, err := strconv.Atoi(v)
@@ -131,6 +132,7 @@ func parseIntPtr(v, field string) (*int, error) {
 // parseFloatPtr парсит непустую строку как float64, ошибка формата → apperr.Invalid по field.
 func parseFloatPtr(v, field string) (*float64, error) {
 	if v == "" {
+		//nolint:nilnil // nil-значение — параметр не передан, не ошибка (см. .claude/rules/go.md: *T как optional)
 		return nil, nil
 	}
 	n, err := strconv.ParseFloat(v, 64)
@@ -144,6 +146,7 @@ func parseFloatPtr(v, field string) (*float64, error) {
 // «не указано» отличается от «явно выключено» (false).
 func parseBoolPtr(v, field string) (*bool, error) {
 	if v == "" {
+		//nolint:nilnil // nil-значение — параметр не передан, не ошибка (см. .claude/rules/go.md: *T как optional)
 		return nil, nil
 	}
 	b, err := strconv.ParseBool(v)

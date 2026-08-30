@@ -689,6 +689,7 @@ func scanBilingual(raw []byte) (domain.Bilingual, error) {
 // scanBilingualPtr разбирает nullable JSONB-колонку {ru,tg}, возвращая nil для NULL.
 func scanBilingualPtr(raw []byte) (*domain.Bilingual, error) {
 	if len(raw) == 0 {
+		//nolint:nilnil // nil-значение — легитимный NULL колонки, не ошибка (см. .claude/rules/go.md: *T как optional)
 		return nil, nil
 	}
 	b, err := scanBilingual(raw)
@@ -708,6 +709,7 @@ type socialsJSON struct {
 // scanSocials разбирает nullable JSONB-колонку socials, возвращая nil для NULL.
 func scanSocials(raw []byte) (*domain.Socials, error) {
 	if len(raw) == 0 {
+		//nolint:nilnil // nil-значение — легитимный NULL колонки, не ошибка (см. .claude/rules/go.md: *T как optional)
 		return nil, nil
 	}
 	var v socialsJSON

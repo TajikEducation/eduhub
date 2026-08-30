@@ -16,7 +16,7 @@ type biWire struct {
 }
 
 func biJSON(b bi) ([]byte, error) {
-	return json.Marshal(biWire{RU: b.RU, TG: b.TG})
+	return json.Marshal(biWire(b))
 }
 
 func biJSONPtr(b *bi) ([]byte, error) {
@@ -29,7 +29,7 @@ func biJSONPtr(b *bi) ([]byte, error) {
 func biSliceJSON(bs []bi) ([]byte, error) {
 	wire := make([]biWire, len(bs))
 	for i, b := range bs {
-		wire[i] = biWire{RU: b.RU, TG: b.TG}
+		wire[i] = biWire(b)
 	}
 	return json.Marshal(wire)
 }
@@ -46,7 +46,7 @@ func linksJSON(links []link) ([]byte, error) {
 	}
 	wire := make([]linkWire, len(links))
 	for i, l := range links {
-		wire[i] = linkWire{Label: l.Label, URL: l.URL}
+		wire[i] = linkWire(l)
 	}
 	return json.Marshal(wire)
 }
