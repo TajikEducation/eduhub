@@ -9,7 +9,10 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/redis/go-redis/v9"
+
 	catalogpg "github.com/abdulhalim/eduhub/backend/internal/catalog/repo/postgres"
+	"github.com/abdulhalim/eduhub/backend/internal/catalog/repo/rediscache"
 	"github.com/abdulhalim/eduhub/backend/internal/platform/config"
 	"github.com/abdulhalim/eduhub/backend/internal/platform/httpx"
 	"github.com/abdulhalim/eduhub/backend/internal/platform/logger"
@@ -35,7 +38,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	handler := newHandler(log, cfg.CORSAllowedOrigins, []httpx.Dependency{{Name: "db", Ping: pool.Ping}}, catalogpg.New(pool))
+	rdb := redis.NewClient(&redis.Options{Addr: cfg.RedisAddr})
+	cache := rediscache.New(rdb)
+
+	handler := newHandler(log, cfg.CORSAllowedOrigins, []httpx.Dependency{{Name: "db", Ping: pool.Ping}}, catalogpg.New(pool), cache)
 
 	deps := Deps{Logger: log, Pool: pool, Handler: handler}
 	if err := run(ctx, cfg, deps); err != nil {

@@ -18,6 +18,7 @@ type Config struct {
 	AppEnv             string
 	HTTPAddr           string
 	DatabaseURL        string
+	RedisAddr          string
 	LogLevel           string
 	ShutdownTimeout    time.Duration
 	CORSAllowedOrigins []string
@@ -29,12 +30,17 @@ func Load() (Config, error) {
 		AppEnv:             os.Getenv("APP_ENV"),
 		HTTPAddr:           os.Getenv("HTTP_ADDR"),
 		DatabaseURL:        os.Getenv("DATABASE_URL"),
+		RedisAddr:          os.Getenv("REDIS_ADDR"),
 		LogLevel:           os.Getenv("LOG_LEVEL"),
 		CORSAllowedOrigins: parseCORSAllowedOrigins(os.Getenv("CORS_ALLOWED_ORIGINS")),
 	}
 
 	if cfg.DatabaseURL == "" {
 		return Config{}, fmt.Errorf("config: DATABASE_URL is required")
+	}
+
+	if cfg.RedisAddr == "" {
+		return Config{}, fmt.Errorf("config: REDIS_ADDR is required")
 	}
 
 	if cfg.HTTPAddr == "" {

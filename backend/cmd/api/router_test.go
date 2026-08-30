@@ -58,7 +58,7 @@ func TestSmoke_CatalogRoutesThroughRealServer(t *testing.T) {
 		getInst: domain.Institution{ID: someID, Name: domain.Bilingual{RU: "Сад №1", TG: "Боғи №1"}, Region: "dushanbe", ModerationStatus: "approved"},
 	}
 
-	handler := newHandler(log, nil, nil, fakeRepo)
+	handler := newHandler(log, nil, nil, fakeRepo, nil)
 
 	cfg := config.Config{HTTPAddr: ":0", ShutdownTimeout: 2 * time.Second}
 	ctx, cancel := context.WithCancel(context.Background())
