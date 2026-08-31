@@ -13,8 +13,11 @@ test-race:
 	go test -race ./...
 
 # Прогнать интеграционные тесты (нужны запущенные сервисы docker-compose, см. docker-compose.yml).
+# -p 1 — пакеты строго последовательно: несколько пакетов интеграционных тестов бьют в одну
+# и ту же TEST_DATABASE_URL, а cmd/devseed коммитит реальные строки (не в rollback-транзакции,
+# как остальные) — при параллельном запуске пакетов это гонка с фикстурами других пакетов.
 test-integration:
-	go test -tags=integration ./...
+	go test -tags=integration -p 1 ./...
 
 # Прогнать golangci-lint по конфигу репозитория (.golangci.yml).
 lint:
