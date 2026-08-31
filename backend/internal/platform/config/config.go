@@ -34,6 +34,12 @@ type Config struct {
 	// JWTSecret — ключ подписи access-токенов HS256 (E2.3). Обязателен: у секрета подписи
 	// нет безопасного дефолта, в отличие от параметров стоимости хеширования.
 	JWTSecret string
+
+	// GoogleClientID — client_id Google OAuth-приложения (аудитория Google ID-токена, E2.4).
+	// НЕОБЯЗАТЕЛЬНОЕ поле: пустая строка — осмысленный и безопасный дефолт "фича Google-входа
+	// отключена" (эндпоинт POST /auth/oauth/google при этом технически существует, но реально
+	// нерабочий — все токены отклоняются верификатором), в отличие от JWTSecret/RedisAddr.
+	GoogleClientID string
 }
 
 // Load читает конфигурацию из ENV, возвращает ошибку при отсутствии обязательной переменной.
@@ -46,6 +52,7 @@ func Load() (Config, error) {
 		LogLevel:           os.Getenv("LOG_LEVEL"),
 		CORSAllowedOrigins: parseCORSAllowedOrigins(os.Getenv("CORS_ALLOWED_ORIGINS")),
 		JWTSecret:          os.Getenv("JWT_SECRET"),
+		GoogleClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
 	}
 
 	if cfg.DatabaseURL == "" {

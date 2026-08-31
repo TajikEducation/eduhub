@@ -46,6 +46,11 @@ type logoutResponse struct {
 	Status string `json:"status"`
 }
 
+type oauthGoogleRequest struct {
+	IDToken        string `json:"id_token"`
+	ConsentVersion string `json:"consent_version"`
+}
+
 type meResponse struct {
 	ID              uuid.UUID  `json:"id"`
 	Email           string     `json:"email"`

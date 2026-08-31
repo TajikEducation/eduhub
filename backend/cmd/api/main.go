@@ -58,11 +58,12 @@ func main() {
 
 	userRepo := authpg.NewUserRepo(pool)
 	refreshTokenRepo := authpg.NewRefreshTokenRepo(pool)
+	oauthRepo := authpg.NewOAuthRepo(pool)
 
 	handler := newHandler(
 		log, cfg.CORSAllowedOrigins, []httpx.Dependency{{Name: "db", Ping: pool.Ping}},
 		catalogpg.New(pool), cache,
-		userRepo, refreshTokenRepo, hasher, []byte(cfg.JWTSecret), clock.New(),
+		userRepo, refreshTokenRepo, oauthRepo, hasher, []byte(cfg.JWTSecret), clock.New(), cfg.GoogleClientID,
 	)
 
 	deps := Deps{Logger: log, Pool: pool, Handler: handler}

@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/abdulhalim/eduhub/backend/internal/auth/domain"
+	"github.com/abdulhalim/eduhub/backend/internal/auth/googleoauth"
 )
 
 // RefreshTokenRepo — порт в БД для refresh-токенов. Реализация — internal/auth/repo/postgres.
@@ -38,4 +39,19 @@ type UserRepo interface {
 	FindByEmail(ctx context.Context, email string) (domain.User, error)
 	// FindByID — apperr.NotFound, если не найден.
 	FindByID(ctx context.Context, id uuid.UUID) (domain.User, error)
+}
+
+// GoogleIDTokenVerifier — порт верификации Google ID-токена. Реализация — internal/auth/googleoauth.
+type GoogleIDTokenVerifier interface {
+	Verify(ctx context.Context, rawIDToken string) (googleoauth.Claims, error)
+}
+
+// OAuthIdentityRepo — порт в БД для связок пользователь↔внешний провайдер (E2.4).
+// Реализация — internal/auth/repo/postgres.
+type OAuthIdentityRepo interface {
+	// FindByProvider — apperr.NotFound, если пары (provider, providerUserID) нет.
+	FindByProvider(ctx context.Context, provider, providerUserID string) (domain.OAuthIdentity, error)
+	// Create — UNIQUE(provider, provider_user_id) конфликт маловероятен в штатном потоке
+	// (проверяется до вызова), но на всякий случай тоже apperr.ConflictCode, не голая ошибка БД.
+	Create(ctx context.Context, oi domain.OAuthIdentity) error
 }

@@ -26,6 +26,7 @@ type accountService interface {
 	Register(ctx context.Context, email, password, consentVersion string) (domain.User, error)
 	Login(ctx context.Context, email, password string) (access, refresh string, err error)
 	Me(ctx context.Context, userID uuid.UUID) (domain.User, error)
+	LoginWithGoogle(ctx context.Context, idToken, consentVersion string) (access, refresh string, err error)
 }
 
 // sessionService — то, что нужно транспорту от usecase-слоя сессий.
@@ -159,6 +160,37 @@ func LogoutHandler(svc sessionService, logger *slog.Logger) http.HandlerFunc {
 		}
 
 		_ = httpx.WriteJSON(w, logger, http.StatusOK, logoutResponse{Status: "ok"})
+	}
+}
+
+// OAuthGoogleHandler — POST /auth/oauth/google. consent_version НЕ валидируется здесь (400) —
+// он нужен только в кейсе реального создания нового пользователя, что в transport-слое заранее
+// не узнать без похода в БД; условная валидация оставлена в usecase (см. AccountService.LoginWithGoogle).
+func OAuthGoogleHandler(svc accountService, logger *slog.Logger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req oauthGoogleRequest
+		if err := httpx.DecodeJSON(w, r, &req); err != nil {
+			httpx.WriteError(w, r, logger, err)
+			return
+		}
+
+		if req.IDToken == "" {
+			httpx.WriteError(w, r, logger, apperr.Invalid(map[string]string{"id_token": "обязателен"}, "некорректные данные"))
+			return
+		}
+
+		access, refresh, err := svc.LoginWithGoogle(r.Context(), req.IDToken, req.ConsentVersion)
+		if err != nil {
+			httpx.WriteError(w, r, logger, err)
+			return
+		}
+
+		_ = httpx.WriteJSON(w, logger, http.StatusOK, tokenResponse{
+			AccessToken:  access,
+			RefreshToken: refresh,
+			TokenType:    "Bearer",
+			ExpiresIn:    accessTokenTTLSeconds,
+		})
 	}
 }
 

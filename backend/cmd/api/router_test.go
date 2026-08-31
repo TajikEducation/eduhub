@@ -58,6 +58,28 @@ func (fakeRefreshTokenRepo) RevokeFamily(context.Context, uuid.UUID, time.Time) 
 	return nil
 }
 
+// fakeOAuthIdentityRepo — минимальный дублёр authusecase.OAuthIdentityRepo для этого же smoke-теста.
+type fakeOAuthIdentityRepo struct{}
+
+func (fakeOAuthIdentityRepo) FindByProvider(context.Context, string, string) (authdomain.OAuthIdentity, error) {
+	return authdomain.OAuthIdentity{}, apperr.NotFound("oauth_identity", "irrelevant")
+}
+
+func (fakeOAuthIdentityRepo) Create(context.Context, authdomain.OAuthIdentity) error {
+	return apperr.Internal(nil)
+}
+
+// fakeOAuthRepo — минимальный дублёр authusecase.OAuthIdentityRepo для этого же smoke-теста.
+type fakeOAuthRepo struct{}
+
+func (fakeOAuthRepo) FindByProvider(context.Context, string, string) (authdomain.OAuthIdentity, error) {
+	return authdomain.OAuthIdentity{}, apperr.NotFound("oauth_identity", "irrelevant")
+}
+
+func (fakeOAuthRepo) Create(context.Context, authdomain.OAuthIdentity) error {
+	return apperr.Internal(nil)
+}
+
 // fakeCatalogRepo — дублёр InstitutionRepo для сквозного smoke-теста: не трогает реальную БД,
 // просто отдаёт заранее подготовленные значения.
 type fakeCatalogRepo struct {
@@ -102,7 +124,7 @@ func TestSmoke_CatalogRoutesThroughRealServer(t *testing.T) {
 	}
 
 	hasher := password.New(password.DefaultParams)
-	handler := newHandler(log, nil, nil, fakeRepo, nil, fakeAuthUserRepo{}, fakeRefreshTokenRepo{}, hasher, []byte("test-secret"), clock.New())
+	handler := newHandler(log, nil, nil, fakeRepo, nil, fakeAuthUserRepo{}, fakeRefreshTokenRepo{}, fakeOAuthIdentityRepo{}, hasher, []byte("test-secret"), clock.New(), "")
 
 	cfg := config.Config{HTTPAddr: ":0", ShutdownTimeout: 2 * time.Second}
 	ctx, cancel := context.WithCancel(context.Background())

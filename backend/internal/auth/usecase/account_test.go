@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/abdulhalim/eduhub/backend/internal/auth/domain"
-	"github.com/abdulhalim/eduhub/backend/internal/auth/jwt"
 	"github.com/abdulhalim/eduhub/backend/internal/auth/password"
 	"github.com/abdulhalim/eduhub/backend/internal/auth/usecase"
 	"github.com/abdulhalim/eduhub/backend/internal/platform/apperr"
@@ -67,13 +66,11 @@ func (f *fakeUserRepo) put(u domain.User) domain.User {
 }
 
 // newTestAccountService собирает AccountService с фейковыми зависимостями поверх общих
-// fakeRefreshTokenRepo/fakeUserRoleLookup из session_test.go — не дублирует их.
+// fakeRefreshTokenRepo/fakeUserRoleLookup из session_test.go — не дублирует их. Google-порты
+// подставлены нулевыми фейками (не используются тестами, не завязанными на LoginWithGoogle) —
+// см. newTestAccountServiceWithGoogle в account_google_test.go для тестов Google-логина.
 func newTestAccountService(users *fakeUserRepo, clk *clock.Fake) *usecase.AccountService {
-	sessionRepo := newFakeRefreshTokenRepo()
-	issuer := jwt.NewIssuer([]byte("test-secret"), 15*time.Minute, clk)
-	sessions := usecase.NewSessionService(sessionRepo, fakeUserRoleLookup{role: "user"}, issuer, clk, refreshTTL)
-	hasher := password.New(password.Params{MemoryKiB: 8 * 1024, Iterations: 1, Parallelism: 1, SaltLength: 16, KeyLength: 32})
-	return usecase.NewAccountService(users, hasher, sessions, clk)
+	return newTestAccountServiceWithGoogle(users, clk, &fakeGoogleVerifier{}, newFakeOAuthRepo())
 }
 
 func TestRegister_Success_CreatesUnverifiedUserWithNormalizedEmail(t *testing.T) {

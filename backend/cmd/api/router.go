@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/abdulhalim/eduhub/backend/internal/auth/googleoauth"
 	"github.com/abdulhalim/eduhub/backend/internal/auth/jwt"
 	"github.com/abdulhalim/eduhub/backend/internal/auth/password"
 	authhttp "github.com/abdulhalim/eduhub/backend/internal/auth/transport/http"
@@ -60,9 +61,11 @@ func newHandler(
 	cache catalogusecase.CacheClient,
 	userRepo authUserRepo,
 	refreshTokenRepo authusecase.RefreshTokenRepo,
+	oauthRepo authusecase.OAuthIdentityRepo,
 	hasher *password.Hasher,
 	jwtSecret []byte,
 	clk clock.Clock,
+	googleClientID string,
 ) http.Handler {
 	baseSvc := catalogusecase.New(catalogRepo)
 
@@ -75,7 +78,8 @@ func newHandler(
 
 	jwtIssuer := jwt.NewIssuer(jwtSecret, accessTokenTTL, clk)
 	sessionSvc := authusecase.NewSessionService(refreshTokenRepo, userRepo, jwtIssuer, clk, refreshTokenTTL)
-	accountSvc := authusecase.NewAccountService(userRepo, hasher, sessionSvc, clk)
+	googleVerifier := googleoauth.NewVerifier(googleClientID)
+	accountSvc := authusecase.NewAccountService(userRepo, hasher, sessionSvc, clk, googleVerifier, oauthRepo)
 
 	router := httpx.NewRouter(log)
 	router.Handle("GET /healthz", httpx.Healthz(log))
@@ -87,6 +91,11 @@ func newHandler(
 	router.Handle("POST /auth/refresh", authhttp.RefreshHandler(sessionSvc, log))
 	router.Handle("POST /auth/logout", authhttp.LogoutHandler(sessionSvc, log))
 	router.Handle("GET /auth/me", authhttp.RequireAuth(jwtIssuer, log)(authhttp.MeHandler(accountSvc, log)))
+	// Регистрируется ВСЕГДА, даже если googleClientID == "": googleoauth.Verifier с пустым
+	// clientID просто отклоняет любые токены как невалидные (oidc.Config{ClientID: ""} не
+	// матчит ни одну аудиторию) — ожидаемая деградация для окружений без настроенного Google
+	// OAuth, не баг.
+	router.Handle("POST /auth/oauth/google", authhttp.OAuthGoogleHandler(accountSvc, log))
 
 	return httpx.Chain(httpx.WithRequestID, httpx.AccessLog(log), httpx.CORS(corsOrigins), httpx.Recover(log))(router)
 }

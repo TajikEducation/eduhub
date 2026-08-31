@@ -41,6 +41,10 @@ type fakeAccountService struct {
 
 	meUser domain.User
 	meErr  error
+
+	googleAccess  string
+	googleRefresh string
+	googleErr     error
 }
 
 func (f *fakeAccountService) Register(_ context.Context, _, _, _ string) (domain.User, error) {
@@ -53,6 +57,10 @@ func (f *fakeAccountService) Login(_ context.Context, _, _ string) (string, stri
 
 func (f *fakeAccountService) Me(_ context.Context, _ uuid.UUID) (domain.User, error) {
 	return f.meUser, f.meErr
+}
+
+func (f *fakeAccountService) LoginWithGoogle(_ context.Context, _, _ string) (string, string, error) {
+	return f.googleAccess, f.googleRefresh, f.googleErr
 }
 
 // fakeSessionService — тестовый двойник sessionService.
@@ -307,6 +315,53 @@ func TestLogoutHandler(t *testing.T) {
 		}
 		if parsed.Status != "ok" {
 			t.Errorf("Status = %q, want %q", parsed.Status, "ok")
+		}
+	})
+}
+
+func TestOAuthGoogleHandler(t *testing.T) {
+	t.Run("пустой id_token возвращает 400", func(t *testing.T) {
+		svc := &fakeAccountService{}
+		req := httptest.NewRequest(http.MethodPost, "/auth/oauth/google", jsonBody(t, oauthGoogleRequest{}))
+		rec := httptest.NewRecorder()
+
+		OAuthGoogleHandler(svc, testLogger()).ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusBadRequest {
+			t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusBadRequest, rec.Body.String())
+		}
+	})
+
+	t.Run("успех возвращает 200 с токенами", func(t *testing.T) {
+		svc := &fakeAccountService{googleAccess: "g-access", googleRefresh: "g-refresh"}
+		req := httptest.NewRequest(http.MethodPost, "/auth/oauth/google", jsonBody(t, oauthGoogleRequest{
+			IDToken: "raw-id-token", ConsentVersion: "v1",
+		}))
+		rec := httptest.NewRecorder()
+
+		OAuthGoogleHandler(svc, testLogger()).ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusOK, rec.Body.String())
+		}
+		var parsed tokenResponse
+		if err := json.Unmarshal(rec.Body.Bytes(), &parsed); err != nil {
+			t.Fatalf("json.Unmarshal: %v", err)
+		}
+		if parsed.AccessToken != "g-access" || parsed.RefreshToken != "g-refresh" {
+			t.Errorf("tokens = %+v, want g-access/g-refresh", parsed)
+		}
+	})
+
+	t.Run("ошибка сервиса пробрасывается как есть через httpx.WriteError", func(t *testing.T) {
+		svc := &fakeAccountService{googleErr: apperr.Unauthorized("невалидный Google id-токен")}
+		req := httptest.NewRequest(http.MethodPost, "/auth/oauth/google", jsonBody(t, oauthGoogleRequest{IDToken: "bad-token"}))
+		rec := httptest.NewRecorder()
+
+		OAuthGoogleHandler(svc, testLogger()).ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusUnauthorized {
+			t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusUnauthorized, rec.Body.String())
 		}
 	})
 }

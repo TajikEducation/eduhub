@@ -97,6 +97,24 @@ func TestLoad_MissingJWTSecret(t *testing.T) {
 	}
 }
 
+func TestLoad_GoogleClientIDUnset_IsEmptyAndNotAnError(t *testing.T) {
+	t.Setenv("APP_ENV", "dev")
+	t.Setenv("HTTP_ADDR", ":8080")
+	t.Setenv("DATABASE_URL", "postgres://eduhub:eduhub@localhost:5433/eduhub?sslmode=disable")
+	t.Setenv("LOG_LEVEL", "info")
+	t.Setenv("REDIS_ADDR", "localhost:6380")
+	t.Setenv("JWT_SECRET", "test-secret")
+	t.Setenv("GOOGLE_CLIENT_ID", "")
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("Load() unexpected error: %v", err)
+	}
+	if cfg.GoogleClientID != "" {
+		t.Errorf("GoogleClientID = %q, want пустую строку", cfg.GoogleClientID)
+	}
+}
+
 func TestLoad_DefaultHTTPAddr(t *testing.T) {
 	t.Setenv("APP_ENV", "dev")
 	t.Setenv("HTTP_ADDR", "")
