@@ -3,9 +3,11 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Briefcase, Wallet, Clock, ChevronRight, Search, X } from "lucide-react";
-import { C, FH, FB, PHOTOS, VACANCIES, INSTITUTIONS, CATEGORY_META, REGION_LABEL, REGION_ORDER, type Vacancy, type Institution, type CategoryKey, type Region } from "@/lib/data";
+import { C, FH, FB, PHOTOS, CATEGORY_META, REGION_LABEL, REGION_ORDER, type CategoryKey, type Region } from "@/lib/data";
 import { useReveal, revealStyle } from "@/lib/useReveal";
 import { useT } from "@/lib/i18n";
+import { useGetVacanciesQuery, type PublicVacancy } from "./api/vacanciesApi";
+import { backendTypeToCategory } from "@/lib/backendTypes";
 
 const CATEGORY_KEYS: CategoryKey[] = ["cat_kg", "cat_school", "cat_center", "cat_uni"];
 
@@ -17,30 +19,29 @@ function Chip({ l, on, click }: { l: string; on: boolean; click: () => void }) {
   );
 }
 
-function VacancyRow({ v, inst, style }: { v: Vacancy; inst: Institution | undefined; style: React.CSSProperties }) {
+function VacancyRow({ v, style }: { v: PublicVacancy; style: React.CSSProperties }) {
   const t = useT();
   const [hov, setHov] = useState(false);
-  const meta = inst ? CATEGORY_META[inst.tk] : null;
-  const Icon = meta?.icon;
-  const accent = inst?.color ?? C.teal;
+  const tk = backendTypeToCategory(v.institution.types[0]);
+  const meta = CATEGORY_META[tk];
+  const Icon = meta.icon;
+  const accent = meta.color;
   return (
     <Link href={`/vacancies/${v.id}`} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       style={{ ...style, display: "flex", alignItems: "center", gap: 16, borderRadius: 16, border: `1px solid ${hov ? accent + "55" : C.border}`, background: C.s1, padding: "14px 20px 14px 14px", textDecoration: "none", transition: "all .22s", transform: hov ? "translateY(-3px)" : "none", boxShadow: hov ? "0 16px 40px rgba(0,0,0,.4)" : undefined }}>
       <div style={{ width: 64, height: 64, borderRadius: 12, overflow: "hidden", position: "relative", flexShrink: 0, background: accent }}>
-        {inst?.coverPhoto && <img src={inst.coverPhoto} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
-        {Icon && (
-          <div style={{ position: "absolute", bottom: 4, left: 4, width: 22, height: 22, borderRadius: 6, background: "rgba(0,0,0,.5)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Icon size={12} color="#fff" />
-          </div>
-        )}
+        {v.institution.cover_photo_s3_key && <img src={v.institution.cover_photo_s3_key} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+        <div style={{ position: "absolute", bottom: 4, left: 4, width: 22, height: 22, borderRadius: 6, background: "rgba(0,0,0,.5)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <Icon size={12} color="#fff" />
+        </div>
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{ fontFamily: FH, fontWeight: 700, fontSize: 15, color: C.text }}>{t(v.title)}</p>
-        <p style={{ fontSize: 13, color: C.sub, marginTop: 2 }}>{inst ? t(inst.name) : ""}{inst ? ` · ${inst.area}` : ""}</p>
+        <p style={{ fontSize: 13, color: C.sub, marginTop: 2 }}>{t(v.institution.name)}{v.institution.district ? ` · ${v.institution.district}` : ""}</p>
         <div style={{ display: "flex", gap: 14, marginTop: 8, flexWrap: "wrap" }}>
-          {v.salaryFrom && (
+          {v.salary_from && (
             <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12.5, color: C.sub }}>
-              <Wallet size={12}/> {v.salaryFrom}–{v.salaryTo} {t("common.perMonth")}
+              <Wallet size={12}/> {v.salary_from}–{v.salary_to} {t("common.perMonth")}
             </span>
           )}
           <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12.5, color: C.sub }}>
@@ -61,22 +62,18 @@ export default function VacanciesPage() {
   const [typeF, setTypeF] = useState<CategoryKey | null>(null);
   const [fullTimeOnly, setFullTimeOnly] = useState(false);
 
-  const withInst = useMemo(
-    () => VACANCIES.filter(v => v.status === "published").map(v => ({ v, inst: INSTITUTIONS.find(x => x.id === v.instId) })),
-    []
-  );
-
-  const vacancies = useMemo(() => withInst.filter(({ v, inst }) => {
+  const { data, isLoading, isError } = useGetVacanciesQuery();
+  const vacancies = useMemo(() => (data?.items ?? []).filter((v) => {
     if (q) {
       const needle = q.toLowerCase();
-      const hay = [t(v.title), inst ? t(inst.name) : ""].join(" ").toLowerCase();
+      const hay = [v.title.ru, v.title.tg, v.institution.name.ru, v.institution.name.tg].join(" ").toLowerCase();
       if (!hay.includes(needle)) return false;
     }
-    if (regionF && inst?.region !== regionF) return false;
-    if (typeF && inst?.tk !== typeF) return false;
+    if (regionF && v.institution.region !== regionF) return false;
+    if (typeF && backendTypeToCategory(v.institution.types[0]) !== typeF) return false;
     if (fullTimeOnly && v.employment.ru !== "Полная занятость") return false;
     return true;
-  }).map(({ v }) => v), [withInst, q, regionF, typeF, fullTimeOnly, t]);
+  }), [data, q, regionF, typeF, fullTimeOnly]);
 
   const activeCount = [regionF !== null, typeF !== null, fullTimeOnly].filter(Boolean).length;
   const clearAll = () => { setRegionF(null); setTypeF(null); setFullTimeOnly(false); };
@@ -139,16 +136,18 @@ export default function VacanciesPage() {
           </div>
         </div>
 
-        {vacancies.length === 0 ? (
+        {isLoading && <p style={{ color: C.muted, fontSize: 14 }}>{t({ ru: "Загрузка…", tg: "Боркунӣ…" })}</p>}
+        {isError && <p style={{ color: C.red, fontSize: 14 }}>{t({ ru: "Backend недоступен", tg: "Backend дастнорас аст" })}</p>}
+
+        {!isLoading && vacancies.length === 0 ? (
           <div style={{ padding: 56, borderRadius: 16, border: `1px dashed ${C.border}`, textAlign: "center", color: C.muted }}>
             <p style={{ fontFamily: FH, fontWeight: 800, fontSize: 17, color: C.text }}>{t("empty.vacancies")}</p>
           </div>
         ) : (
           <div ref={ref} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {vacancies.map((v, i) => {
-              const inst = INSTITUTIONS.find(x => x.id === v.instId);
-              return <VacancyRow key={v.id} v={v} inst={inst} style={revealStyle(visible, Math.min(i, 8) * 45)} />;
-            })}
+            {vacancies.map((v, i) => (
+              <VacancyRow key={v.id} v={v} style={revealStyle(visible, Math.min(i, 8) * 45)} />
+            ))}
           </div>
         )}
       </div>

@@ -1,23 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, GraduationCap, UserRound, Send } from "lucide-react";
-import { C, FH, SEED_APPLICANTS } from "@/lib/data";
-import { useAppState } from "@/lib/app-state";
-import { useLocale, useT } from "@/lib/i18n";
-
-const DASH_INST_ID = 1;
+import { ChevronRight, GraduationCap, UserRound } from "lucide-react";
+import { C, FH } from "@/lib/data";
+import { useT } from "@/lib/i18n";
+import { useListApplicantsQuery } from "./api/applicantsApi";
 
 export default function ApplicantsPage() {
-  const { applicant, role, myInstitution, hasResponded, addEmployerResponse } = useAppState();
-  const { locale } = useLocale();
   const t = useT();
-  // публичный каталог показывает только полностью публичные профили — не "по отклику"
-  const published = [
-    ...SEED_APPLICANTS.filter((a) => a.visibility === "public"),
-    ...(applicant.visibility === "public" ? [applicant] : []),
-  ];
-  const instId = myInstitution?.id ?? DASH_INST_ID;
+  const { data, isLoading, isError } = useListApplicantsQuery();
+  const published = data?.items ?? [];
 
   return (
     <div style={{ maxWidth: 1260, margin: "0 auto", padding: "28px 28px 80px" }}>
@@ -39,39 +31,31 @@ export default function ApplicantsPage() {
         </p>
       </div>
 
-      {published.length === 0 ? (
+      {isLoading && <p style={{ color: C.muted, fontSize: 14 }}>{t({ ru: "Загрузка…", tg: "Боркунӣ…" })}</p>}
+      {isError && <p style={{ color: C.red, fontSize: 14 }}>{t({ ru: "Backend недоступен", tg: "Backend дастнорас аст" })}</p>}
+
+      {!isLoading && published.length === 0 ? (
         <div style={{ padding: 56, borderRadius: 16, border: `1px dashed ${C.border}`, textAlign: "center", color: C.muted }}>
           <UserRound size={28} style={{ color: C.dim, margin: "0 auto 12px" }} />
           <p style={{ fontFamily: FH, fontWeight: 800, fontSize: 17, color: C.text }}>{t("empty.candidates")}</p>
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {published.map((a) => {
-            const responded = hasResponded(a.id, instId);
-            return (
-              <Link key={a.id} href={`/applicants/${a.id}`} style={{ display: "flex", alignItems: "center", gap: 16, borderRadius: 16, border: `1px solid ${C.border}`, background: C.s1, padding: "16px 20px", textDecoration: "none" }}>
-                <img src={a.photo} alt="" style={{ width: 52, height: 52, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontFamily: FH, fontWeight: 700, fontSize: 15, color: C.text }}>{a.name[locale]}</p>
-                  <p style={{ fontSize: 13, color: C.teal, marginTop: 2 }}>{a.position[locale]}</p>
-                  {a.education[0] && (
-                    <p style={{ fontSize: 12.5, color: C.sub, marginTop: 4, display: "flex", alignItems: "center", gap: 5 }}>
-                      <GraduationCap size={12} /> {a.education[0][locale]}
-                    </p>
-                  )}
-                </div>
-                {role === "institution" && (
-                  <button
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!responded) addEmployerResponse(a.id, instId, t({ ru: "Мы заинтересованы в вашем профиле — напишите нам в чат.", tg: "Мо ба профили шумо шавқмандем — дар чат ба мо нависед." })); }}
-                    disabled={responded}
-                    style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, background: responded ? C.s2 : C.teal, color: responded ? C.dim : C.overlay, fontFamily: FH, fontWeight: 700, fontSize: 12.5, border: "none", cursor: responded ? "default" : "pointer", flexShrink: 0 }}>
-                    <Send size={13} /> {responded ? t({ ru: "Приглашение отправлено", tg: "Даъватнома фиристода шуд" }) : t({ ru: "Пригласить к диалогу", tg: "Ба гуфтугӯ даъват кардан" })}
-                  </button>
+          {published.map((a) => (
+            <Link key={a.id} href={`/applicants/${a.id}`} style={{ display: "flex", alignItems: "center", gap: 16, borderRadius: 16, border: `1px solid ${C.border}`, background: C.s1, padding: "16px 20px", textDecoration: "none" }}>
+              <img src={a.photo_url || "/logo.svg"} alt="" style={{ width: 52, height: 52, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontFamily: FH, fontWeight: 700, fontSize: 15, color: C.text }}>{a.name.ru}</p>
+                <p style={{ fontSize: 13, color: C.teal, marginTop: 2 }}>{a.position.ru}</p>
+                {a.education?.[0] && (
+                  <p style={{ fontSize: 12.5, color: C.sub, marginTop: 4, display: "flex", alignItems: "center", gap: 5 }}>
+                    <GraduationCap size={12} /> {a.education[0].ru}
+                  </p>
                 )}
-                <ChevronRight size={18} style={{ color: C.dim, flexShrink: 0 }} />
-              </Link>
-            );
-          })}
+              </div>
+              <ChevronRight size={18} style={{ color: C.dim, flexShrink: 0 }} />
+            </Link>
+          ))}
         </div>
       )}
     </div>

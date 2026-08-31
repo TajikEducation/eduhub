@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { LayoutDashboard, Settings, Building2, Star, Users, Briefcase, ShieldAlert, ArrowRight } from "lucide-react";
-import { C, FH, FB, INSTITUTIONS, ALL_STAFF, VACANCIES, REVIEWS } from "@/lib/data";
+import { LayoutDashboard, Settings, Building2, Clock, CheckCircle, XCircle, ShieldAlert, ArrowRight, ShieldCheck } from "lucide-react";
+import { C, FH, FB } from "@/lib/data";
 import { useAppState } from "@/lib/app-state";
 import { useT } from "@/lib/i18n";
+import { useMeQuery } from "@/app/(site)/login/api/authApi";
+import { getAccessToken } from "@/lib/authToken";
+import { useListModerationInstitutionsQuery } from "@/app/(site)/moderator/api/moderationApi";
 
 type Tab = "overview" | "settings";
 
@@ -25,23 +28,50 @@ function FormField({ label, children }: { label: React.ReactNode; children: Reac
 
 export default function AdminPage() {
   const t = useT();
-  const { myInstitution, platformSettings, setPlatformSettings } = useAppState();
+  const { platformSettings, setPlatformSettings } = useAppState();
   const [tab, setTab] = useState<Tab>("overview");
   const [proPrice, setProPrice] = useState(platformSettings.tierPrices.pro);
   const [entPrice, setEntPrice] = useState(platformSettings.tierPrices.enterprise);
   const [maintenance, setMaintenance] = useState(platformSettings.maintenanceMode);
   const [saved, setSaved] = useState(false);
 
-  const pendingCount = myInstitution?.status === "pending" ? 1 : 0;
-  // + собственная заявка пользователя, если она уже не в статичном сид-массиве (новая регистрация)
-  const ownExtra = myInstitution && !INSTITUTIONS.some((i) => i.id === myInstitution.id) ? 1 : 0;
-  const totalInstitutions = INSTITUTIONS.length + ownExtra;
+  const { data: me, isLoading: meLoading } = useMeQuery(undefined, { skip: !getAccessToken() });
+  const isAdmin = me?.role === "moderator" || me?.role === "admin";
+  const { data, isLoading, isError } = useListModerationInstitutionsQuery(undefined, { skip: !isAdmin });
+
+  const stats = useMemo(() => {
+    const items = data?.items ?? [];
+    return {
+      total: items.length,
+      pending: items.filter((i) => i.moderation_status === "pending").length,
+      approved: items.filter((i) => i.moderation_status === "approved").length,
+      rejected: items.filter((i) => i.moderation_status === "rejected").length,
+    };
+  }, [data]);
 
   function saveSettings(e: React.FormEvent) {
     e.preventDefault();
     setPlatformSettings({ tierPrices: { pro: proPrice, enterprise: entPrice }, maintenanceMode: maintenance });
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  }
+
+  if (meLoading) {
+    return <div style={{ padding: 60, textAlign: "center", color: C.muted, fontFamily: FB }}>{t({ ru: "Загрузка…", tg: "Боркунӣ…" })}</div>;
+  }
+
+  if (!isAdmin) {
+    return (
+      <div style={{ maxWidth: 480, margin: "0 auto", padding: "60px 28px", textAlign: "center", fontFamily: FB }}>
+        <ShieldCheck size={26} style={{ color: C.dim, marginBottom: 12 }} />
+        <p style={{ fontFamily: FH, fontWeight: 800, fontSize: 17, color: C.text, marginBottom: 8 }}>
+          {t({ ru: "Доступ только для администраторов", tg: "Дастрасӣ танҳо барои маъмурон" })}
+        </p>
+        <p style={{ fontSize: 13.5, color: C.muted }}>
+          {t({ ru: "Войдите в аккаунт с ролью модератора или администратора.", tg: "Бо аккаунти дорои нақши модератор ё маъмур ворид шавед." })}
+        </p>
+      </div>
+    );
   }
 
   return (
@@ -64,12 +94,16 @@ export default function AdminPage() {
         {tab === "overview" && (
           <div>
             <h1 style={{ fontFamily: FH, fontWeight: 900, fontSize: 24, marginBottom: 22 }}>{t({ ru: "Обзор платформы", tg: "Хулосаи платформа" })}</h1>
+
+            {isLoading && <p style={{ color: C.muted, fontSize: 14, marginBottom: 20 }}>{t({ ru: "Загрузка…", tg: "Боркунӣ…" })}</p>}
+            {isError && <p style={{ color: C.red, fontSize: 14, marginBottom: 20 }}>{t({ ru: "Backend недоступен", tg: "Backend дастнорас аст" })}</p>}
+
             <div className="eh-mobile-1col" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 24 }}>
               {[
-                { l: t({ ru: "Учреждений", tg: "Муассисаҳо" }), v: totalInstitutions, icon: Building2 },
-                { l: t("common.reviews"), v: REVIEWS.length, icon: Star },
-                { l: t({ ru: "Персонала", tg: "Кормандон" }), v: ALL_STAFF.length, icon: Users },
-                { l: t({ ru: "Вакансий", tg: "Ҷойҳои холӣ" }), v: VACANCIES.length, icon: Briefcase },
+                { l: t({ ru: "Учреждений всего", tg: "Ҳамаи муассисаҳо" }), v: stats.total, icon: Building2 },
+                { l: t({ ru: "На модерации", tg: "Дар модератсия" }), v: stats.pending, icon: Clock },
+                { l: t({ ru: "Одобрено", tg: "Тасдиқшуда" }), v: stats.approved, icon: CheckCircle },
+                { l: t({ ru: "Отклонено", tg: "Радшуда" }), v: stats.rejected, icon: XCircle },
               ].map((s) => (
                 <div key={s.l} style={{ borderRadius: 16, border: `1px solid ${C.border}`, background: C.s1, padding: 18 }}>
                   <s.icon size={16} style={{ color: C.teal, marginBottom: 8 }} />
@@ -81,12 +115,14 @@ export default function AdminPage() {
 
             <Link href="/moderator" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderRadius: 16, border: `1px solid ${C.border}`, background: C.s1, padding: 18, textDecoration: "none" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ width: 38, height: 38, borderRadius: 10, background: pendingCount ? `${C.gold}18` : `${C.ok}18`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <ShieldAlert size={18} style={{ color: pendingCount ? C.gold : C.ok }} />
+                <div style={{ width: 38, height: 38, borderRadius: 10, background: stats.pending ? `${C.gold}18` : `${C.ok}18`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <ShieldAlert size={18} style={{ color: stats.pending ? C.gold : C.ok }} />
                 </div>
                 <div>
                   <p style={{ fontFamily: FH, fontWeight: 700, fontSize: 14, color: C.text }}>
-                    {pendingCount ? t({ ru: "1 заявка на модерации", tg: "1 ариза дар модератсия" }) : t({ ru: "Заявок на модерации нет", tg: "Ариза нест" })}
+                    {stats.pending
+                      ? t({ ru: `${stats.pending} заявок на модерации`, tg: `${stats.pending} ариза дар модератсия` })
+                      : t({ ru: "Заявок на модерации нет", tg: "Ариза нест" })}
                   </p>
                   <p style={{ fontSize: 12, color: C.dim }}>{t({ ru: "Перейти к очереди модератора", tg: "Ба навбати модератор гузаред" })}</p>
                 </div>
@@ -98,7 +134,13 @@ export default function AdminPage() {
 
         {tab === "settings" && (
           <div>
-            <h1 style={{ fontFamily: FH, fontWeight: 900, fontSize: 24, marginBottom: 22 }}>{t({ ru: "Настройки платформы", tg: "Танзимоти платформа" })}</h1>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22 }}>
+              <h1 style={{ fontFamily: FH, fontWeight: 900, fontSize: 24 }}>{t({ ru: "Настройки платформы", tg: "Танзимоти платформа" })}</h1>
+              <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 7, background: C.s3, color: C.dim, fontFamily: FH }}>demo</span>
+            </div>
+            <p style={{ fontSize: 12.5, color: C.muted, marginBottom: 16, maxWidth: 420 }}>
+              {t({ ru: "Тарифы и биллинг — вне текущей SRS-версии бэкенда, хранится только в этом браузере.", tg: "Тарифҳо ва биллинг — берун аз версияи ҷории бэкенд, танҳо дар ин браузер нигоҳ дошта мешавад." })}
+            </p>
             <form onSubmit={saveSettings} style={{ maxWidth: 420, borderRadius: 18, border: `1px solid ${C.border}`, background: C.s1, padding: 24 }}>
               <FormField label={t({ ru: "Тариф Pro, $/мес", tg: "Тарифи Pro, $/моҳ" })}>
                 <input type="number" min={0} value={proPrice} onChange={(e) => setProPrice(Number(e.target.value))} style={inputStyle} />

@@ -7,9 +7,15 @@ import { Search, SlidersHorizontal, ChevronDown, X, Map } from "lucide-react";
 import { C, FH, FB, CATEGORY_META, REGION_LABEL, REGION_ORDER, type CategoryKey } from "@/lib/data";
 import { InstitCard } from "@/components/InstitCard";
 import { useReveal, revealStyle } from "@/lib/useReveal";
-import { useVisibleInstitutions } from "@/lib/app-state";
-import { useT } from "@/lib/i18n";
+import { useT, useLocale } from "@/lib/i18n";
+import { useGetInstitutionsQuery } from "./api/searchApi";
+import { CATEGORY_TO_BACKEND_TYPE, backendInstitutionToCard } from "@/lib/backendTypes";
 
+// sort — только то, что реально понимает backend (score|price_asc, см.
+// backend/internal/catalog/transport/http/query.go parseSort). price_desc/reviews в UI
+// оставлены для совместимости с существующим select, но backend их не поддерживает —
+// при выборе одного из них сортировка молча остаётся дефолтной (без сообщения об ошибке
+// пользователю, т.к. это не invalid input, а просто неподдерживаемый порядок).
 type SortKey = "score"|"price_asc"|"price_desc"|"reviews";
 const CATEGORY_KEYS: CategoryKey[] = ["cat_kg", "cat_school", "cat_center", "cat_uni"];
 
@@ -53,6 +59,7 @@ function SearchPageInner() {
   const pathname = usePathname();
   const urlParams = useSearchParams();
   const t = useT();
+  const { locale } = useLocale();
   const [q,        setQ]        = useState(urlParams.get("q") ?? "");
   const [typeF,    setTypeF]    = useState<CategoryKey|null>((urlParams.get("type") as CategoryKey) || null);
   const [regionF,  setRegionF]  = useState<string|null>(urlParams.get("region"));
@@ -92,28 +99,26 @@ function SearchPageInner() {
 
   const clearAll = () => { setTypeF(null); setRegionF(null); setAreaF([]); setRatingF(0); setTransF(false); setFoodF(false); setVerF(false); setMinPrice(0); setMaxPrice(2000); };
 
-  const institutions = useVisibleInstitutions();
-  let results = institutions.filter(i => {
-    if(q) {
-      const needle = q.toLowerCase();
-      const hay = [i.name.ru, i.name.tg, i.area, t(CATEGORY_META[i.tk].label)].join(" ").toLowerCase();
-      if (!hay.includes(needle)) return false;
-    }
-    if(typeF   && i.tk!==typeF)         return false;
-    if(regionF && i.region!==regionF)   return false;
-    if(areaF.length>0 && !areaF.includes(i.area)) return false;
-    if(i.score < ratingF)              return false;
-    if(i.price < minPrice || i.price > maxPrice) return false;
-    if(transF  && !i.transport)        return false;
-    if(foodF   && !i.food)             return false;
-    if(verF    && !i.ver)              return false;
-    return true;
-  });
-
-  if(sort==="score")      results = [...results].sort((a,b)=>b.score-a.score);
-  if(sort==="price_asc")  results = [...results].sort((a,b)=>a.price-b.price);
-  if(sort==="price_desc") results = [...results].sort((a,b)=>b.price-a.price);
-  if(sort==="reviews")    results = [...results].sort((a,b)=>b.rev-a.rev);
+  // Реальный запрос к backend/internal/catalog (см. ./api/searchApi.ts) — единственный
+  // источник результатов. Бэкенд поддерживает не все параметры UI 1:1: sort понимает
+  // только score|price_asc (см. комментарий у SortKey выше), area — один район, а не
+  // мультивыбор (backend/internal/catalog/transport/http/query.go: f.Area — одна строка).
+  const backendParams = {
+    q: q || undefined,
+    type: typeF ? CATEGORY_TO_BACKEND_TYPE[typeF] : undefined,
+    region: regionF ?? undefined,
+    area: areaF[0] || undefined,
+    min_price: minPrice > 0 ? minPrice : undefined,
+    max_price: maxPrice < 2000 ? maxPrice : undefined,
+    min_rating: ratingF > 0 ? ratingF : undefined,
+    transport: transF || undefined,
+    food: foodF || undefined,
+    verified: verF || undefined,
+    sort: (sort === "score" || sort === "price_asc" ? sort : undefined) as "score" | "price_asc" | undefined,
+    limit: 30,
+  };
+  const { data: backendData, isFetching: backendLoading, isError: backendError } = useGetInstitutionsQuery(backendParams);
+  const results = (backendData?.items ?? []).map((inst) => backendInstitutionToCard(inst, locale));
 
   return (
     <div style={{maxWidth:1260,margin:"0 auto",padding:"28px 28px 72px"}}>
@@ -236,7 +241,14 @@ function SearchPageInner() {
             </div>
           )}
 
-          {results.length===0 ? (
+          {backendLoading && <p style={{fontSize:13,color:C.muted}}>{t({ru:"Загрузка…",tg:"Боркунӣ…"})}</p>}
+          {backendError && (
+            <div style={{padding:56,borderRadius:16,border:`1px dashed ${C.border}`,textAlign:"center",color:C.red}}>
+              {t({ru:"Backend недоступен",tg:"Backend дастнорас аст"})}
+            </div>
+          )}
+
+          {!backendLoading && !backendError && results.length===0 ? (
             <div style={{padding:56,borderRadius:16,border:`1px dashed ${C.border}`,textAlign:"center",color:C.muted}}>
               <Search size={32} style={{color:C.dim,margin:"0 auto 12px"}}/>
               <p style={{fontFamily:FH,fontWeight:800,fontSize:18,color:C.text,marginBottom:6}}>{t("empty.notFound")}</p>

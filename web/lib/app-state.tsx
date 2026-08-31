@@ -52,9 +52,9 @@ export interface PlatformSettings {
 const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = { tierPrices: { pro: 30, enterprise: 100 }, maintenanceMode: false };
 
 interface AppStateValue {
-  savedIds: number[];
-  isSaved: (id: number) => boolean;
-  toggleSaved: (id: number) => void;
+  savedIds: (number | string)[];
+  isSaved: (id: number | string) => boolean;
+  toggleSaved: (id: number | string) => void;
 
   notifications: Notification[];
   unreadNotifications: number;
@@ -100,7 +100,7 @@ const AppStateContext = createContext<AppStateValue | null>(null);
 const LS_KEY = "eduhub_app_state_v2";
 
 interface Stored {
-  savedIds: number[];
+  savedIds: (number | string)[];
   role: Role;
   locale: Locale;
   region: Region | null;
@@ -152,7 +152,7 @@ function readStored(): Stored {
 }
 
 export function AppStateProvider({ children }: { children: React.ReactNode }) {
-  const [savedIds, setSavedIds] = useState<number[]>(() => readStored().savedIds);
+  const [savedIds, setSavedIds] = useState<(number | string)[]>(() => readStored().savedIds);
   const [notifications, setNotifications] = useState<Notification[]>(NOTIFICATIONS);
   const [unreadMessages, setUnreadMessages] = useState<number>(2);
   const [role, setRole] = useState<Role>(() => readStored().role);
@@ -169,8 +169,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem(LS_KEY, JSON.stringify({ savedIds, role, locale, region, children_, applicant, applications, myInstitution, platformSettings, employerResponses }));
   }, [savedIds, role, locale, region, children_, applicant, applications, myInstitution, platformSettings, employerResponses]);
 
-  const isSaved = useCallback((id: number) => savedIds.includes(id), [savedIds]);
-  const toggleSaved = useCallback((id: number) => {
+  const isSaved = useCallback((id: number | string) => savedIds.includes(id), [savedIds]);
+  const toggleSaved = useCallback((id: number | string) => {
     setSavedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }, []);
 

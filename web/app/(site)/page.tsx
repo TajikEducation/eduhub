@@ -1,22 +1,24 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Search, ArrowRight, ChevronRight, ShieldCheck, SlidersHorizontal, Star, MessageCircle, Send, Users, Building2, Briefcase, LocateFixed } from "lucide-react";
 import { C, FH, FB, PHOTOS, CATEGORY_META, REGION_LABEL, type CategoryKey } from "@/lib/data";
 import { InstitCard } from "@/components/InstitCard";
 import { useReveal, revealStyle } from "@/lib/useReveal";
-import { useAppState, useVisibleInstitutions } from "@/lib/app-state";
+import { useAppState } from "@/lib/app-state";
 import { useT } from "@/lib/i18n";
-import { detectCoords, haversine } from "@/lib/geo";
+import { detectCoords } from "@/lib/geo";
+import { useGetInstitutionsQuery } from "./search/api/searchApi";
+import { CATEGORY_TO_BACKEND_TYPE, backendInstitutionToCard } from "@/lib/backendTypes";
 
 const CATEGORY_KEYS: CategoryKey[] = ["cat_kg", "cat_school", "cat_center", "cat_uni"];
 
 export default function HomePage() {
   const router = useRouter();
   const [q, setQ] = useState("");
-  const { region } = useAppState();
+  const { region, locale } = useAppState();
   const t = useT();
   // точные координаты — только в памяти текущей сессии, не персистятся (минимизация PII)
   const [myCoords, setMyCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -32,18 +34,20 @@ export default function HomePage() {
       .finally(() => setLocating(false));
   }
 
-  const institutions = useVisibleInstitutions();
+  // деградация: точные координаты (geo-запрос к backend) → выбранный регион → вся страна
+  const { data: nearbyData } = useGetInstitutionsQuery(
+    myCoords
+      ? { lat: myCoords.lat, lng: myCoords.lng, radius_km: 30, sort: "score", limit: 4 }
+      : { region: region ?? undefined, sort: "score", limit: 4 }
+  );
+  const nearby = (nearbyData?.items ?? []).map((inst) => backendInstitutionToCard(inst, locale));
 
-  // деградация: точные координаты → выбранный регион → вся страна (по рейтингу)
-  const nearby = useMemo(() => {
-    if (myCoords) {
-      return [...institutions]
-        .sort((a, b) => haversine(myCoords, a.geo) - haversine(myCoords, b.geo))
-        .slice(0, 4);
-    }
-    const pool = region ? institutions.filter(i => i.region === region) : institutions;
-    return [...pool].sort((a,b)=>b.score-a.score).slice(0,4);
-  }, [region, myCoords, institutions]);
+  const { data: categoryCountsData } = useGetInstitutionsQuery({ limit: 200 });
+  const categoryCounts = (categoryCountsData?.items ?? []).reduce<Record<string, number>>((acc, inst) => {
+    const type = inst.types[0];
+    if (type) acc[type] = (acc[type] ?? 0) + 1;
+    return acc;
+  }, {});
 
   const { ref: missionRef, visible: missionVisible } = useReveal<HTMLDivElement>();
   const { ref: catRef, visible: catVisible } = useReveal<HTMLDivElement>();
@@ -163,7 +167,7 @@ export default function HomePage() {
           {CATEGORY_KEYS.map((k,i)=>{
             const meta = CATEGORY_META[k];
             const Icon = meta.icon;
-            const count = institutions.filter(x=>x.tk===k).length;
+            const count = categoryCounts[CATEGORY_TO_BACKEND_TYPE[k]] ?? 0;
             return (
               <Link key={k} href={`/search?type=${k}`}
                 style={{borderRadius:18,overflow:"hidden",border:`1px solid ${C.border}`,background:C.s1,cursor:"pointer",textDecoration:"none",display:"block",...revealStyle(catVisible,i*60)}}>

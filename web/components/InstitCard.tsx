@@ -2,9 +2,30 @@
 
 import { useState } from "react";
 import { CheckCircle, Heart, Bus, UtensilsCrossed } from "lucide-react";
-import { C, FH, Institution, CATEGORY_META, CURRICULUM_META } from "@/lib/data";
+import { C, FH, CATEGORY_META, CURRICULUM_META, type CategoryKey, type Bi, type CurriculumKey } from "@/lib/data";
 import { useAppState } from "@/lib/app-state";
 import { useT } from "@/lib/i18n";
+
+// Узкий тип вместо полного mock Institution — InstitCard читает только эти поля, что
+// позволяет использовать её и с mock-данными (lib/data.ts), и с адаптированными
+// карточками из реального backend (см. lib/backendTypes.ts) без риска сломать существующих
+// вызывающих: любой mock Institution уже структурно satisfies этот более узкий тип.
+export interface InstitCardData {
+  id: number | string;
+  tk: CategoryKey;
+  color: string;
+  coverPhoto: string;
+  tag: Bi | null;
+  area: string;
+  name: Bi;
+  score: number;
+  rev: number;
+  ver: boolean;
+  transport: boolean;
+  food: boolean;
+  curriculum?: CurriculumKey[];
+  price: number;
+}
 
 function Stars({ s, size=12 }:{s:number;size?:number}) {
   return (
@@ -19,7 +40,7 @@ function Stars({ s, size=12 }:{s:number;size?:number}) {
 }
 
 export function InstitCard({ inst, onClick }: {
-  inst: Institution;
+  inst: InstitCardData;
   onClick: ()=>void;
 }) {
   const [hov,setHov] = useState(false);

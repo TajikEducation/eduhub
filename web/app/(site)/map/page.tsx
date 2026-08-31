@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { MapPin } from "lucide-react";
 import { C, FH, FB, CATEGORY_META, REGION_LABEL, REGION_ORDER, type Region } from "@/lib/data";
 import { RegionMap, type Bbox } from "@/components/InstMap";
-import { useVisibleInstitutions } from "@/lib/app-state";
 import { useT } from "@/lib/i18n";
+import { useGetInstitutionsQuery } from "@/app/(site)/search/api/searchApi";
+import { backendTypeToCategory } from "@/lib/backendTypes";
 
 const REGION_BBOX: Record<Region, Bbox> = {
   dushanbe: [68.70, 38.50, 68.87, 38.62],
@@ -21,15 +22,18 @@ export default function MapPage() {
   const router = useRouter();
   const t = useT();
   const [regionFilter, setRegionFilter] = useState<Region | null>(null);
-  const institutions = useVisibleInstitutions();
+  const { data, isLoading, isError } = useGetInstitutionsQuery({ region: regionFilter ?? undefined, limit: 50 });
 
-  const list = useMemo(
-    () => institutions.filter((i) => i.geo && (!regionFilter || i.region === regionFilter)),
-    [institutions, regionFilter]
-  );
+  const list = useMemo(() => (data?.items ?? []).map((inst) => ({
+    id: inst.id,
+    tk: backendTypeToCategory(inst.types[0]),
+    name: inst.name,
+    region: inst.region,
+    geo: { lat: inst.lat, lng: inst.lng },
+  })), [data]);
   const bbox = regionFilter ? REGION_BBOX[regionFilter] : ALL_BBOX;
   const points = list.map((i) => ({
-    id: i.id, lat: i.geo!.lat, lng: i.geo!.lng,
+    id: i.id, lat: i.geo.lat, lng: i.geo.lng,
     label: t(i.name), color: CATEGORY_META[i.tk].color, href: `/institutions/${i.id}`,
   }));
 
@@ -68,11 +72,14 @@ export default function MapPage() {
         </span>
       </div>
 
-      {list.length === 0 ? (
+      {isLoading && <p style={{ color: C.muted, fontSize: 14 }}>{t({ ru: "Загрузка…", tg: "Боркунӣ…" })}</p>}
+      {isError && <p style={{ color: C.red, fontSize: 14 }}>{t({ ru: "Backend недоступен", tg: "Backend дастнорас аст" })}</p>}
+
+      {!isLoading && list.length === 0 ? (
         <div style={{ padding: 56, borderRadius: 16, border: `1px dashed ${C.border}`, textAlign: "center", color: C.muted }}>
           <p style={{ fontFamily: FH, fontWeight: 800, fontSize: 17, color: C.text }}>{t("empty.notFound")}</p>
         </div>
-      ) : (
+      ) : !isLoading && (
         <RegionMap points={points} bbox={bbox} height={520} />
       )}
 

@@ -1,29 +1,33 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { MapPin } from "lucide-react";
 import { C, FH, FB, CATEGORY_META, REGION_LABEL, REGION_ORDER, type CategoryKey } from "@/lib/data";
 import { InstitCard } from "./InstitCard";
 import { SubjectMotifs } from "./SubjectMotifs";
-import { useAppState, useVisibleInstitutions } from "@/lib/app-state";
+import { useAppState } from "@/lib/app-state";
 import { useT } from "@/lib/i18n";
 import { useReveal, revealStyle } from "@/lib/useReveal";
+import { useGetInstitutionsQuery } from "@/app/(site)/search/api/searchApi";
+import { CATEGORY_TO_BACKEND_TYPE, backendInstitutionToCard } from "@/lib/backendTypes";
 
 export function CategoryListing({ tk }: { tk: CategoryKey }) {
   const router = useRouter();
   const t = useT();
-  const { region: globalRegion } = useAppState();
+  const { region: globalRegion, locale } = useAppState();
   const [regionFilter, setRegionFilter] = useState(globalRegion);
   const meta = CATEGORY_META[tk];
   const Icon = meta.icon;
   const { ref, visible } = useReveal<HTMLDivElement>();
-  const institutions = useVisibleInstitutions();
 
-  const list = useMemo(
-    () => institutions.filter((i) => i.tk === tk && (!regionFilter || i.region === regionFilter)),
-    [institutions, tk, regionFilter]
-  );
+  const { data, isLoading, isError } = useGetInstitutionsQuery({
+    type: CATEGORY_TO_BACKEND_TYPE[tk],
+    region: regionFilter ?? undefined,
+    sort: "score",
+    limit: 24,
+  });
+  const list = (data?.items ?? []).map((inst) => backendInstitutionToCard(inst, locale));
 
   return (
     <div>
@@ -71,7 +75,10 @@ export function CategoryListing({ tk }: { tk: CategoryKey }) {
           </span>
         </div>
 
-        {list.length === 0 ? (
+        {isLoading && <p style={{ color: C.muted, fontSize: 14 }}>{t({ ru: "Загрузка…", tg: "Боркунӣ…" })}</p>}
+        {isError && <p style={{ color: C.red, fontSize: 14 }}>{t({ ru: "Backend недоступен", tg: "Backend дастнорас аст" })}</p>}
+
+        {!isLoading && list.length === 0 ? (
           <div style={{ padding: 56, borderRadius: 16, border: `1px dashed ${C.border}`, textAlign: "center", color: C.muted }}>
             <p style={{ fontFamily: FH, fontWeight: 800, fontSize: 17, color: C.text, marginBottom: 6 }}>{t("empty.notFound")}</p>
             <p style={{ fontSize: 13.5 }}>{t({ ru: "В этом регионе пока нет учреждений этой категории", tg: "Дар ин минтақа ҳанӯз муассисаи ин категория нест" })}</p>
