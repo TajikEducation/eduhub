@@ -1,0 +1,13 @@
+# syntax=docker/dockerfile:1
+# Dev-образ с hot-reload (next dev). НЕ для деплоя — прод собирается отдельно (standalone build).
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Только манифесты — кэшируемый слой, независим от исходников (те приходят через volume).
+COPY package.json package-lock.json ./
+RUN npm ci
+
+EXPOSE 3000
+
+ENTRYPOINT ["npm", "run", "dev"]

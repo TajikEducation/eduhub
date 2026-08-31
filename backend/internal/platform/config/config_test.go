@@ -1,6 +1,7 @@
 package config_test
 
 import (
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -14,6 +15,7 @@ func TestLoad_AllVarsSet(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgres://eduhub:eduhub@localhost:5433/eduhub?sslmode=disable")
 	t.Setenv("LOG_LEVEL", "debug")
 	t.Setenv("SHUTDOWN_TIMEOUT", "15s")
+	t.Setenv("REDIS_ADDR", "localhost:6380")
 
 	cfg, err := config.Load()
 	if err != nil {
@@ -35,6 +37,9 @@ func TestLoad_AllVarsSet(t *testing.T) {
 	if cfg.ShutdownTimeout != 15*time.Second {
 		t.Errorf("ShutdownTimeout = %v, want %v", cfg.ShutdownTimeout, 15*time.Second)
 	}
+	if cfg.RedisAddr != "localhost:6380" {
+		t.Errorf("RedisAddr = %q, want %q", cfg.RedisAddr, "localhost:6380")
+	}
 }
 
 func TestLoad_MissingDatabaseURL(t *testing.T) {
@@ -42,6 +47,7 @@ func TestLoad_MissingDatabaseURL(t *testing.T) {
 	t.Setenv("HTTP_ADDR", ":8080")
 	t.Setenv("DATABASE_URL", "")
 	t.Setenv("LOG_LEVEL", "info")
+	t.Setenv("REDIS_ADDR", "localhost:6380")
 
 	_, err := config.Load()
 	if err == nil {
@@ -52,11 +58,28 @@ func TestLoad_MissingDatabaseURL(t *testing.T) {
 	}
 }
 
+func TestLoad_MissingRedisAddr(t *testing.T) {
+	t.Setenv("APP_ENV", "dev")
+	t.Setenv("HTTP_ADDR", ":8080")
+	t.Setenv("DATABASE_URL", "postgres://eduhub:eduhub@localhost:5433/eduhub?sslmode=disable")
+	t.Setenv("LOG_LEVEL", "info")
+	t.Setenv("REDIS_ADDR", "")
+
+	_, err := config.Load()
+	if err == nil {
+		t.Fatal("Load() expected error for missing REDIS_ADDR, got nil")
+	}
+	if !strings.Contains(err.Error(), "REDIS_ADDR") {
+		t.Errorf("error %q does not mention REDIS_ADDR", err.Error())
+	}
+}
+
 func TestLoad_DefaultHTTPAddr(t *testing.T) {
 	t.Setenv("APP_ENV", "dev")
 	t.Setenv("HTTP_ADDR", "")
 	t.Setenv("DATABASE_URL", "postgres://eduhub:eduhub@localhost:5433/eduhub?sslmode=disable")
 	t.Setenv("LOG_LEVEL", "info")
+	t.Setenv("REDIS_ADDR", "localhost:6380")
 
 	cfg, err := config.Load()
 	if err != nil {
@@ -64,5 +87,41 @@ func TestLoad_DefaultHTTPAddr(t *testing.T) {
 	}
 	if cfg.HTTPAddr != ":8080" {
 		t.Errorf("HTTPAddr = %q, want default %q", cfg.HTTPAddr, ":8080")
+	}
+}
+
+func TestLoad_CORSAllowedOriginsParsesCommaSeparated(t *testing.T) {
+	t.Setenv("APP_ENV", "dev")
+	t.Setenv("HTTP_ADDR", ":8080")
+	t.Setenv("DATABASE_URL", "postgres://eduhub:eduhub@localhost:5433/eduhub?sslmode=disable")
+	t.Setenv("LOG_LEVEL", "info")
+	t.Setenv("REDIS_ADDR", "localhost:6380")
+	t.Setenv("CORS_ALLOWED_ORIGINS", "http://localhost:3000, https://eduhub.tj")
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("Load() unexpected error: %v", err)
+	}
+
+	want := []string{"http://localhost:3000", "https://eduhub.tj"}
+	if !slices.Equal(cfg.CORSAllowedOrigins, want) {
+		t.Errorf("CORSAllowedOrigins = %v, want %v", cfg.CORSAllowedOrigins, want)
+	}
+}
+
+func TestLoad_CORSAllowedOriginsUnsetIsEmpty(t *testing.T) {
+	t.Setenv("APP_ENV", "dev")
+	t.Setenv("HTTP_ADDR", ":8080")
+	t.Setenv("DATABASE_URL", "postgres://eduhub:eduhub@localhost:5433/eduhub?sslmode=disable")
+	t.Setenv("LOG_LEVEL", "info")
+	t.Setenv("REDIS_ADDR", "localhost:6380")
+	t.Setenv("CORS_ALLOWED_ORIGINS", "")
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("Load() unexpected error: %v", err)
+	}
+	if len(cfg.CORSAllowedOrigins) != 0 {
+		t.Errorf("CORSAllowedOrigins = %v, want empty", cfg.CORSAllowedOrigins)
 	}
 }

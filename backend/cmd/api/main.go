@@ -8,16 +8,16 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
+	"github.com/redis/go-redis/v9"
+
+	catalogpg "github.com/abdulhalim/eduhub/backend/internal/catalog/repo/postgres"
+	"github.com/abdulhalim/eduhub/backend/internal/catalog/repo/rediscache"
 	"github.com/abdulhalim/eduhub/backend/internal/platform/config"
 	"github.com/abdulhalim/eduhub/backend/internal/platform/httpx"
 	"github.com/abdulhalim/eduhub/backend/internal/platform/logger"
 	"github.com/abdulhalim/eduhub/backend/internal/platform/pg"
 )
-
-// readyzTimeout — сколько ждём ответа от каждой зависимости в /readyz.
-const readyzTimeout = 2 * time.Second
 
 func main() {
 	cfg, err := config.Load()
@@ -38,11 +38,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	router := httpx.NewRouter(log)
-	router.Handle("GET /healthz", httpx.Healthz(log))
-	router.Handle("GET /readyz", httpx.Readyz(log, readyzTimeout, httpx.Dependency{Name: "db", Ping: pool.Ping}))
+	rdb := redis.NewClient(&redis.Options{Addr: cfg.RedisAddr})
+	cache := rediscache.New(rdb)
 
-	handler := httpx.Chain(httpx.WithRequestID, httpx.AccessLog(log), httpx.Recover(log))(router)
+	handler := newHandler(log, cfg.CORSAllowedOrigins, []httpx.Dependency{{Name: "db", Ping: pool.Ping}}, catalogpg.New(pool), cache)
 
 	deps := Deps{Logger: log, Pool: pool, Handler: handler}
 	if err := run(ctx, cfg, deps); err != nil {

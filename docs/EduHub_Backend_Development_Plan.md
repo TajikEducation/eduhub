@@ -145,24 +145,48 @@ backend/
 Приёмка: `docker compose up -d && docker compose ps` — все три `healthy`; `psql "$DATABASE_URL" -c "SELECT postgis_version()"` печатает версию; `curl -f http://localhost:9000/minio/health/live` → 200.
 
 **3. `internal/platform/config` — загрузка конфигурации**
-RED: (а) все переменные заданы → `Load()` без ошибки; (б) `DATABASE_URL` пуст → ошибка с именем переменной; (в) `HTTP_ADDR` не задан → дефолт `:8080`.
+
+RED:
+- (а) все переменные заданы → `Load()` без ошибки
+- (б) `DATABASE_URL` пуст → ошибка с именем переменной
+- (в) `HTTP_ADDR` не задан → дефолт `:8080`
+
 GREEN: типизированный `Config` (`ShutdownTimeout time.Duration`, не строка), `Load() (Config, error)`.
 Приёмка: `go test ./internal/platform/config/ -v` → PASS на 3 кейсах.
 
 **4. `internal/platform/logger` — slog**
-RED: (а) `New(cfg)` с `LOG_LEVEL=info` пишет JSON с ключами `time/level/msg/service`; (б) `Debug` при `info` не пишет; (в) `PtrOrNil[T](*T) any` → `nil` для nil-указателя.
+
+RED:
+- (а) `New(cfg)` с `LOG_LEVEL=info` пишет JSON с ключами `time/level/msg/service`
+- (б) `Debug` при `info` не пишет
+- (в) `PtrOrNil[T](*T) any` → `nil` для nil-указателя
+
 Приёмка: `go test ./internal/platform/logger/ -v` → PASS.
 
 **5. `internal/platform/apperr` — таксономия ошибок**
-RED: (а) `apperr.NotFound(...)` матчится через `errors.Is(err, apperr.ErrNotFound)`; (б) обёрнутая `fmt.Errorf("repo: %w", err)` тоже матчится; (в) `apperr.Invalid` несёт `map[string]string` полей через `errors.As`.
+
+RED:
+- (а) `apperr.NotFound(...)` матчится через `errors.Is(err, apperr.ErrNotFound)`
+- (б) обёрнутая `fmt.Errorf("repo: %w", err)` тоже матчится
+- (в) `apperr.Invalid` несёт `map[string]string` полей через `errors.As`
+
 Приёмка: `go test ./internal/platform/apperr/ -v` → PASS.
 
 **6. `internal/platform/httpx` — request_id middleware**
-RED: (а) без заголовка генерируется UUID, в `X-Request-ID` ответа и в контексте; (б) входящий заголовок сохраняется; (в) `RequestID(context.Background())` → пустая строка, не паника.
+
+RED:
+- (а) без заголовка генерируется UUID, в `X-Request-ID` ответа и в контексте
+- (б) входящий заголовок сохраняется
+- (в) `RequestID(context.Background())` → пустая строка, не паника
+
 Приёмка: `go test ./internal/platform/httpx/ -run TestRequestID -v` → PASS.
 
 **7. `httpx` — recovery + access-log middleware**
-RED: (а) panic не роняет сервер, 500 + `{"error":{"code":"internal"...}}`, стек в лог; (б) access-log содержит `method/path/status/duration_ms/request_id`, НЕ содержит query-строку целиком (запрос `?q=Саидахон` не оставляет текст в логе).
+
+RED:
+- (а) panic не роняет сервер, 500 + `{"error":{"code":"internal"...}}`, стек в лог
+- (б) access-log содержит `method/path/status/duration_ms/request_id`, НЕ содержит query-строку целиком (запрос `?q=Саидахон` не оставляет текст в логе)
+
 Приёмка: `go test ./internal/platform/httpx/ -run 'TestRecover|TestAccessLog' -v` → PASS.
 
 **8. `httpx` — маппинг ошибок в HTTP**
@@ -170,11 +194,23 @@ RED: таблица `NotFound→404, Invalid→400+fields, Unauthorized→401, F
 Приёмка: `go test ./internal/platform/httpx/ -run TestWriteError -v` → PASS на 8 кейсах.
 
 **9. `httpx` — JSON in/out**
-RED: (а) `Content-Type: application/json; charset=utf-8`; (б) тело >1MB → `Invalid(body_too_large)`, не 500; (в) неизвестное поле → `Invalid` (`DisallowUnknownFields`); (г) битый JSON → `Invalid`, не паника; (д) пустой слайс → `[]`, не `null`.
+
+RED:
+- (а) `Content-Type: application/json; charset=utf-8`
+- (б) тело >1MB → `Invalid(body_too_large)`, не 500
+- (в) неизвестное поле → `Invalid` (`DisallowUnknownFields`)
+- (г) битый JSON → `Invalid`, не паника
+- (д) пустой слайс → `[]`, не `null`
+
 Приёмка: `go test ./internal/platform/httpx/ -run TestJSON -v` → PASS.
 
 **10. `internal/platform/pg` — пул pgx**
-RED (build tag `integration`): (а) `pg.Open` коннектится, `Ping` проходит; (б) недостижимый URL → ошибка в пределах `ConnectTimeout`, не висит; (в) пустой `TEST_DATABASE_URL` → `t.Skip`.
+
+RED (build tag `integration`):
+- (а) `pg.Open` коннектится, `Ping` проходит
+- (б) недостижимый URL → ошибка в пределах `ConnectTimeout`, не висит
+- (в) пустой `TEST_DATABASE_URL` → `t.Skip`
+
 Приёмка: `go test -tags=integration ./internal/platform/pg/ -v` → PASS; без docker — SKIP, не FAIL.
 
 **11. Миграционный инструмент + миграция 00001 (расширения и схемы)**
@@ -183,16 +219,32 @@ RED (build tag `integration`): (а) `pg.Open` коннектится, `Ping` п�
 Приёмка: `make migrate-up` → `OK 00001_bootstrap.sql`; `psql -c "\dn"` → 7 схем; `make migrate-down` откатывает чисто.
 
 **12. `httpx` — healthz/readyz**
-RED: (а) `GET /healthz` → 200 без обращения к БД; (б) `GET /readyz` с падающим pinger → 503 + имя зависимости; (в) успешный pinger → 200; (г) readyz уважает таймаут 2с (spin-pinger 5с → 503, не зависание).
+
+RED:
+- (а) `GET /healthz` → 200 без обращения к БД
+- (б) `GET /readyz` с падающим pinger → 503 + имя зависимости
+- (в) успешный pinger → 200
+- (г) readyz уважает таймаут 2с (spin-pinger 5с → 503, не зависание)
+
 Приёмка: `go test ./internal/platform/httpx/ -run TestHealth -v` → PASS.
 
 **13. `httpx` — роутер и цепочка middleware**
-RED: (а) `Chain(mw1,mw2)(h)` вызывает в объявленном порядке; (б) неизвестный путь → 404 в JSON, не html; (в) неверный метод → 405.
+
+RED:
+- (а) `Chain(mw1,mw2)(h)` вызывает в объявленном порядке
+- (б) неизвестный путь → 404 в JSON, не html
+- (в) неверный метод → 405
+
 GREEN: обёртка над `http.ServeMux` (Go 1.22 pattern-routing).
 Приёмка: `go test ./internal/platform/httpx/ -run TestRouter -v` → PASS.
 
 **14. `cmd/api/main.go` — сборка и graceful shutdown**
-RED: логика в `run(ctx, cfg, deps) error`: (а) сервер стартует на `:0`, `/healthz` → 200; (б) отмена контекста при in-flight запросе (handler спит 200мс) завершается успешно в пределах `ShutdownTimeout`; (в) после shutdown пул БД закрыт.
+
+RED: логика в `run(ctx, cfg, deps) error`:
+- (а) сервер стартует на `:0`, `/healthz` → 200
+- (б) отмена контекста при in-flight запросе (handler спит 200мс) завершается успешно в пределах `ShutdownTimeout`
+- (в) после shutdown пул БД закрыт
+
 GREEN: `signal.NotifyContext(SIGINT,SIGTERM)`, `srv.Shutdown`, `ReadHeaderTimeout`/`WriteTimeout` выставлены (защита от Slowloris).
 Приёмка: `go test -race ./cmd/api/ -v` → PASS; `make run` печатает `listening addr=:8080`, Ctrl+C → `shutdown complete` без паники.
 
@@ -205,7 +257,11 @@ GREEN: in-memory token bucket по IP с TTL-очисткой. Коммента�
 Что: `.golangci.yml` (`errcheck/govet/staticcheck/nilerr/nilnil/bodyclose/rowserrcheck/contextcheck/exhaustive/gosec/noctx`), GitHub Actions job `backend`: `go vet` → `golangci-lint run` → `go test -race ./...` → `go test -tags=integration ./...` (сервисный контейнер postgis) → `govulncheck ./...` → `docker build`. Deploy-артефакт: `Dockerfile` — multi-stage build (`.claude/rules/devops.md`), builder-слой `golang:1.23` собирает статический бинарник (`CGO_ENABLED=0`), финальный слой `distroless/static` (без шелла/пакетного менеджера — меньше поверхность атаки), `.dockerignore` исключает `.git`/тесты/локальные `.env`, секреты — только через переменные окружения контейнера, не в образе. CI-шаг сборки образа предотвращает дрейф между локальной сборкой и тем, что реально задеплоится.
 Приёмка: `make lint` → 0 issues; `make vuln` → No vulnerabilities; `docker build -t eduhub-api .` без ошибок, `docker run --rm eduhub-api` (с валидным `DATABASE_URL` и т.д.) поднимает сервер, `/healthz` отвечает 200 изнутри контейнера; push в ветку → CI job зелёный, включая шаг `docker build`.
 
-**Критерий готовности вехи 0:** `make test-race && make lint && make vuln` зелёные; `make migrate-up && make migrate-down` идемпотентны; `/healthz` 200, `/readyz` 503 при остановленном Postgres; `docker build` проходит в CI.
+**Критерий готовности вехи 0:**
+- `make test-race && make lint && make vuln` зелёные
+- `make migrate-up && make migrate-down` идемпотентны
+- `/healthz` 200, `/readyz` 503 при остановленном Postgres
+- `docker build` проходит в CI
 
 ---
 
@@ -222,59 +278,133 @@ GREEN: in-memory token bucket по IP с TTL-очисткой. Коммента�
 Фильтры — 1:1 с реальным фронтом (`web/app/(site)/search/page.tsx:56-116`), плюс гео (`web/lib/geo.ts` уже умеет определять координаты клиентски). `curriculum`, `program_level` и `discount` — прямое требование FR-01 (программа обучения, ступень, наличие скидок как обязательные фасетные фильтры).
 
 **17. Миграция 00002 — `catalog.institutions`**
-Поля: `id UUID PK DEFAULT gen_random_uuid()`, `name JSONB NOT NULL`, `types TEXT[] NOT NULL`, `region TEXT NOT NULL`, `city JSONB`, `district TEXT`, `description JSONB`, `address JSONB`, `geo GEOGRAPHY(Point,4326) NOT NULL`, `location_landmarks TEXT`, `license_no TEXT`, `languages TEXT[]`, `program_level TEXT[]`, `curriculum TEXT[]`, `price INT`, транспорт/питание/скидки-поля, `phone TEXT`, `email TEXT`, `website TEXT`, `socials JSONB`, `cover_photo_s3_key TEXT`, `age_range TEXT`, `tag JSONB` (полный список полей, включая контакты/описание/адрес, требуемые FR-06 — см. `docs/EduHub_Database_Schema.md`), `verified BOOL NOT NULL DEFAULT false`, `moderation_status TEXT NOT NULL DEFAULT 'pending' CHECK (moderation_status IN ('pending','approved','rejected'))`, `plan TEXT NOT NULL DEFAULT 'free'`, `plan_expires_at TIMESTAMPTZ`, `founded INT`, `students_count INT`, `rating_avg NUMERIC(3,2)`, `review_count INT NOT NULL DEFAULT 0` (денормализация — заполняется вехой 4 через порт `RatingSync`, но колонки нужны сразу — фильтр `min_rating` и `sort=score` обязаны работать одним SQL-запросом), `created_at/updated_at TIMESTAMPTZ NOT NULL DEFAULT now()`.
+Поля: `id UUID PK DEFAULT gen_random_uuid()`, `name JSONB NOT NULL`, `types TEXT[] NOT NULL`, `region TEXT NOT NULL`, `city JSONB`, `district TEXT`, `description JSONB`, `address JSONB`, `geo GEOGRAPHY(Point,4326) NOT NULL`, `location_landmarks TEXT`, `license_no TEXT`, `languages TEXT[]`, `program_level TEXT[]`, `curriculum TEXT[]`, `price INT`, скидки-поля (`discount_available/type/details`), `phone TEXT`, `email TEXT`, `website TEXT`, `socials JSONB`, `cover_photo_s3_key TEXT`, `age_range TEXT`, `tag JSONB` (полный список полей, включая контакты/описание/адрес, требуемые FR-06 — см. `docs/EduHub_Database_Schema.md`), `verified BOOL NOT NULL DEFAULT false`, `moderation_status TEXT NOT NULL DEFAULT 'pending' CHECK (moderation_status IN ('pending','approved','rejected'))`, `plan TEXT NOT NULL DEFAULT 'free'`, `plan_expires_at TIMESTAMPTZ`, `founded INT`, `students_count INT`, `rating_avg NUMERIC(3,2)`, `review_count INT NOT NULL DEFAULT 0` (денормализация — заполняется вехой 4 через порт `RatingSync`, но колонки нужны сразу — фильтр `min_rating` и `sort=score` обязаны работать одним SQL-запросом), `created_at/updated_at TIMESTAMPTZ NOT NULL DEFAULT now()`.
+Транспорт и питание — НЕ колонки этой таблицы (реверс более раннего 1:1-дизайна, 2026-08-28, см. `docs/adr/0002-institution-transport-meals-split.md`): институция может иметь несколько независимых маршрутов/вариантов питания, каждый со своей ценой — это 1:N, вынесено в `catalog.institution_transport_routes`/`institution_meal_plans` (задача 19).
 Приёмка: `make migrate-up` → OK; `\d catalog.institutions` показывает все колонки; `make migrate-down` откатывает чисто.
 
 **18. Миграция 00003 — индексы `CONCURRENTLY`**
-`-- +goose NO TRANSACTION`. `GIST(geo)`; `GIN(name jsonb_path_ops)`; `GIN((name->>'ru') gin_trgm_ops)` и аналогично `'tg'` (подстрочный поиск на обоих языках); `GIN(types)`; `GIN(curriculum)`; `GIN(program_level)`; `btree(region, district)`; частичный `btree(rating_avg DESC, id) WHERE moderation_status='approved'`; `btree(price) WHERE moderation_status='approved'`; частичный `UNIQUE(lower(name->>'ru'), region, district) WHERE moderation_status<>'rejected'` (защита от двойного сабмита формы регистрации — `rejected`-заявки не блокируют повторную попытку с исправленными данными).
+`-- +goose NO TRANSACTION`. Индексы:
+- `GIST(geo)`
+- `GIN(name jsonb_path_ops)`
+- `GIN((name->>'ru') gin_trgm_ops)` и аналогично `'tg'` (подстрочный поиск на обоих языках)
+- `GIN(types)`
+- `GIN(curriculum)`
+- `GIN(program_level)`
+- `btree(region, district)`
+- частичный `btree(rating_avg DESC, id) WHERE moderation_status='approved'`
+- `btree(price) WHERE moderation_status='approved'`
+- частичный `UNIQUE(lower(name->>'ru'), region, district) WHERE moderation_status<>'rejected'` (защита от двойного сабмита формы регистрации — `rejected`-заявки не блокируют повторную попытку с исправленными данными)
+
 Решение по поиску: `pg_trgm`, не `tsvector` — словаря для таджикского в Postgres нет, `to_tsvector('simple',...)` не даёт стемминга ни для одного языка, а фронт делает подстрочное совпадение (`.includes`) — trigram воспроизводит это поведение на обоих языках одинаково.
 Приёмка: `make migrate-up` без ошибок; `EXPLAIN` на гео-запросе показывает `Index Scan ... gist`.
 
 **19. Миграция 00004 — сателлитные таблицы каталога**
-`catalog.institution_staff`, `catalog.achievements` (полиморфно: `owner_type CHECK IN ('institution','staff','student')` + `owner_id UUID`, индекс `(owner_type, owner_id)`, без FK — полиморфные ссылки не поддерживают FK), `catalog.institution_gallery` (S3-ключ, не URL), `catalog.institution_alumni`, `catalog.news_articles`, `catalog.institution_metrics` (пустая на этой вехе — заполняется портом `RatingSync` начиная с вехи 4, структура создаётся сразу вместе с остальным каталогом), `catalog.institution_owner_verifications` (материалы верификации владельца, FR-34). Все — FK на `catalog.institutions(id) ON DELETE CASCADE` (внутри своей схемы FK разрешены свободно).
+`catalog.institution_staff`, `catalog.achievements` (полиморфно: `owner_type CHECK IN ('institution','staff','student')` + `owner_id UUID`, индекс `(owner_type, owner_id)`, без FK — полиморфные ссылки не поддерживают FK), `catalog.institution_gallery` (S3-ключ, не URL), `catalog.institution_alumni`, `catalog.news_articles`, `catalog.institution_metrics` (пустая на этой вехе — заполняется портом `RatingSync` начиная с вехи 4, структура создаётся сразу вместе с остальным каталогом), `catalog.institution_owner_verifications` (материалы верификации владельца, FR-34), `catalog.institution_transport_routes` (`type` CHECK, `label`/`areas` `{ru,tg}` JSONB, `cost`+`cost_period` CHECK, `sort_order`), `catalog.institution_meal_plans` (`meal_type` CHECK, `label` JSONB, `cost`+`cost_period` CHECK, `halal` nullable, `sort_order`) — обе 1:N, полные поля см. `docs/EduHub_Database_Schema.md`. Все — FK на `catalog.institutions(id) ON DELETE CASCADE` (внутри своей схемы FK разрешены свободно).
 Приёмка: `make migrate-up/down` чисто; таблицы каталога соответствуют `docs/EduHub_Database_Schema.md`.
 
 **20. `internal/catalog/domain` — сущности и `Filter`**
-RED: (а) `Filter{MinPrice:p(500),MaxPrice:p(100)}.Validate()` → ошибка поля `min_price`; (б) `Limit=0` после `Normalize()` → 20, `Limit=500` → капается на 50; (в) `Lat` без `Lng` → ошибка; (г) `RadiusKm` без координат → ошибка; (д) пустой `Filter` валиден. Конструктор `Institution` гарантирует `Gallery`/`Types` как `[]T{}`, не `nil`. Поля `Curriculum []string`/`ProgramLevel []string`/`Discount *bool` — множественные, пересечение (не точное совпадение).
+
+RED:
+- (а) `Filter{MinPrice:p(500),MaxPrice:p(100)}.Validate()` → ошибка поля `min_price`
+- (б) `Limit=0` после `Normalize()` → 20, `Limit=500` → капается на 50
+- (в) `Lat` без `Lng` → ошибка
+- (г) `RadiusKm` без координат → ошибка
+- (д) пустой `Filter` валиден
+
+Конструктор `Institution` гарантирует `Gallery`/`Types` как `[]T{}`, не `nil`. Поля `Curriculum []string`/`ProgramLevel []string`/`Discount *bool` — множественные, пересечение (не точное совпадение).
 Приёмка: `go test ./internal/catalog/domain/ -v` → PASS на 6 кейсах; `go list -deps ./internal/catalog/domain | grep -E 'pgx|net/http'` → пусто.
 
 **21. `internal/catalog/repo/postgres` — `List` без гео**
-RED (integration, транзакция+rollback фикстур): 5 институций (3 approved, 1 pending, 1 rejected). (а) пустой фильтр → только 3 approved; (б) `Region="sughd"` → 1; (в) `Types=["cat_school"]` → верное подмножество; (г) `Q="гулис"` находит по подстроке в обоих языках; (д) `MinRating=4.5` не возвращает институции с `rating_avg IS NULL` (NULL — «нет данных», не «ноль»); (е) `Curriculum=["bilingual","stem"]` возвращает институции хотя бы с одним из значений (SQL `&&`, оператор пересечения — FR-01 буквально «пересечение массивов», не `@>`/«содержит все»: родитель отмечает несколько программ и хочет видеть учреждения с любой из них, не только с обеими сразу); (ж) `Discount=true` → только `discount_available=true`.
+RED (integration, транзакция+rollback фикстур): 5 институций (3 approved, 1 pending, 1 rejected).
+- (а) пустой фильтр → только 3 approved
+- (б) `Region="sughd"` → 1
+- (в) `Types=["cat_school"]` → верное подмножество
+- (г) `Q="гулис"` находит по подстроке в обоих языках
+- (д) `MinRating=4.5` не возвращает институции с `rating_avg IS NULL` (NULL — «нет данных», не «ноль»)
+- (е) `Curriculum=["bilingual","stem"]` возвращает институции хотя бы с одним из значений (SQL `&&`, оператор пересечения — FR-01 буквально «пересечение массивов», не `@>`/«содержит все»: родитель отмечает несколько программ и хочет видеть учреждения с любой из них, не только с обеими сразу)
+- (ж) `Discount=true` → только `discount_available=true`
+
 GREEN: интерфейс `usecase.InstitutionRepo` + реализация, строго параметризованный билдер (`$1..$n`), без конкатенации значений. Approved-only не хардкодится в репо — приходит из usecase-фильтра.
 Приёмка: `go test -tags=integration ./internal/catalog/repo/postgres/ -run TestListInstitutions -v` → PASS на 5 кейсах.
 
 **22. `repo/postgres` — гео-фильтр и сортировка**
-RED: координаты Душанбе/Худжанда/Бохтара (реальные значения из `web/lib/data.ts`, поле `geo`). (а) центр Душанбе+`radius_km=10` → только душанбинские; (б) `radius_km=500` → все; (в) при заданном гео в результате есть `DistanceM *float64`, монотонно растёт; (г) без гео `DistanceM == nil` (не `0` — контракт важен); (д) `sort=price_asc` корректен, `sort=score` ставит `NULL` в конец (`NULLS LAST`).
+RED: координаты Душанбе/Худжанда/Бохтара (реальные значения из `web/lib/data.ts`, поле `geo`).
+- (а) центр Душанбе+`radius_km=10` → только душанбинские
+- (б) `radius_km=500` → все
+- (в) при заданном гео в результате есть `DistanceM *float64`, монотонно растёт
+- (г) без гео `DistanceM == nil` (не `0` — контракт важен)
+- (д) `sort=price_asc` корректен, `sort=score` ставит `NULL` в конец (`NULLS LAST`)
+
 GREEN: `ST_DWithin(geo, ST_MakePoint($lng,$lat)::geography, $radius_m)` + `ORDER BY geo <-> point` при гео-сортировке.
 Приёмка: `go test -tags=integration ./internal/catalog/repo/postgres/ -run TestListGeo -v` → PASS; `EXPLAIN ANALYZE` — Index Scan по GIST.
 
 **23. `repo/postgres` — keyset-пагинация**
-RED (25 фикстур): (а) `limit=10` → 10 записей + `next_cursor`; (б) второй курсор → следующие 10 без пересечений/пропусков; (в) последняя страница → пустой `next_cursor`; (г) битый курсор → `Invalid`, не паника/500; (д) курсор с `sort=score` отвергается при `sort=price_asc` (sort зашит в курсор).
+RED (25 фикстур):
+- (а) `limit=10` → 10 записей + `next_cursor`
+- (б) второй курсор → следующие 10 без пересечений/пропусков
+- (в) последняя страница → пустой `next_cursor`
+- (г) битый курсор → `Invalid`, не паника/500
+- (д) курсор с `sort=score` отвергается при `sort=price_asc` (sort зашит в курсор)
+
 GREEN: непрозрачный base64(JSON) курсор `{sort,last_value,last_id}`, условие `WHERE (rating_avg,id) < ($v,$id)`. Keyset вместо OFFSET — детерминированность при параллельных вставках, без деградации на росте каталога.
 Приёмка: `go test -tags=integration ./internal/catalog/repo/postgres/ -run TestListPagination -v` → PASS на 5 кейсах.
 
 **24. `repo/postgres` — карточка институции одним запросом**
-RED: (а) `GetByID` собирает staff/achievements/gallery/alumni одним вызовом; (б) отсутствует → `NotFound`; (в) без сотрудников → `Staff=[]`, не `nil`; (г) NULL в `license_no`/`transport_cost` → `nil`, не `""`/`0`; (д) счётчик SQL-запросов = 1 (через pgx QueryTracer — защита от N+1 в будущих рефакторингах).
-GREEN: один SQL с `LEFT JOIN LATERAL (SELECT coalesce(json_agg(...),'[]') ...) ON true` на каждую коллекцию.
+RED:
+- (а) `GetByID` собирает staff/achievements/gallery/alumni/transport_routes/meal_plans одним вызовом
+- (б) отсутствует → `NotFound`
+- (в) без сотрудников → `Staff=[]`, не `nil`
+- (г) NULL в `license_no`/`price` → `nil`, не `""`/`0`
+- (д) счётчик SQL-запросов = 1 (через pgx QueryTracer — защита от N+1 в будущих рефакторингах)
+- (е) элементы каждой коллекции (`gallery`, `transport_routes`, `meal_plans` и т.д.) возвращаются в стабильном порядке между повторными вызовами
+
+GREEN: один SQL с `LEFT JOIN LATERAL (SELECT coalesce(json_agg(... ORDER BY sort_order, created_at, id),'[]') ...) ON true` на каждую коллекцию — явный `ORDER BY` внутри агрегата обязателен на ВСЕХ коллекциях карточки (используя `sort_order` там, где колонка есть, иначе `created_at, id`), не только на новых: без него порядок `json_agg` не гарантирован между вызовами, тело ответа может отличаться при неизменном `updated_at`, и `If-None-Match` (задача 28) может отдать 304 на фактически устаревшее содержимое.
 Приёмка: `go test -tags=integration ./internal/catalog/repo/postgres/ -run TestGetByID -v` → PASS на 5 кейсах включая счётчик=1.
 
 **25. `internal/catalog/usecase` — сервис List/Get**
-RED (фейковый репозиторий, без БД): (а) сервис всегда подставляет `Statuses=["approved"]`, даже если DTO пытается передать другое; (б) `Normalize` применён до вызова репо; (в) ошибка репо оборачивается с сохранением `errors.Is`; (г) `Get` для `pending` → `NotFound`, не `Forbidden` (не раскрываем существование немодерированной институции); (д) отменённый контекст пробрасывается в репо.
+RED (фейковый репозиторий, без БД):
+- (а) сервис всегда подставляет `Statuses=["approved"]`, даже если DTO пытается передать другое
+- (б) `Normalize` применён до вызова репо
+- (в) ошибка репо оборачивается с сохранением `errors.Is`
+- (г) `Get` для `pending` → `NotFound`, не `Forbidden` (не раскрываем существование немодерированной институции)
+- (д) отменённый контекст пробрасывается в репо
+
 GREEN: `catalog.Service`, здесь же объявляется порт `RatingSync` (пустой пока — точка стыковки с вехой 4).
 Приёмка: `go test -race ./internal/catalog/usecase/ -v` → PASS на 5 кейсах.
 
 **26. `transport/http` — парсинг и валидация query**
-RED (~14 кейсов): `sort=hack` → 400 c полем `sort`; `min_price=abc` → 400; `lat=200` → 400; `limit=-1` → 400; `type=cat_school,cat_uni` → слайс из 2; `transport=1` → `true`, `transport=` → `nil` (не `false` — отсутствие фильтра и «выключен» это разное); `curriculum=bilingual,stem` → слайс из 2; `discount=true` → `*bool` true; неизвестный query-параметр игнорируется (форвард-совместимость с фронтом).
+RED (~14 кейсов):
+- `sort=hack` → 400 c полем `sort`
+- `min_price=abc` → 400
+- `lat=200` → 400
+- `limit=-1` → 400
+- `type=cat_school,cat_uni` → слайс из 2
+- `transport=1` → `true`, `transport=` → `nil` (не `false` — отсутствие фильтра и «выключен» это разное)
+- `curriculum=bilingual,stem` → слайс из 2
+- `discount=true` → `*bool` true
+- неизвестный query-параметр игнорируется (форвард-совместимость с фронтом)
+
 GREEN: `parseListQuery` — только синтаксис/нормализация, семантика (`min<max`) не дублируется (уже в `domain.Filter.Validate()`).
 Приёмка: `go test ./internal/catalog/transport/http/ -run TestParseListQuery -v` → PASS на 14 кейсах.
 
 **27. `transport/http` — handler списка + DTO ответа**
-RED (httptest, фейковый usecase): (а) 200, `{"items":[...],"next_cursor":"...","total_hint":null}`; (б) 0 результатов → `"items":[]`, не `null`; (в) `distance_m` отсутствует при `nil` (`omitempty`), присутствует при заданном; (г) `NotFound` → 404 через `httpx.WriteError`; (д) `Cache-Control: public, max-age=60`.
+RED (httptest, фейковый usecase):
+- (а) 200, `{"items":[...],"next_cursor":"...","total_hint":null}`
+- (б) 0 результатов → `"items":[]`, не `null`
+- (в) `distance_m` отсутствует при `nil` (`omitempty`), присутствует при заданном
+- (г) `NotFound` → 404 через `httpx.WriteError`
+- (д) `Cache-Control: public, max-age=60`
+
 GREEN: явный DTO-маппинг domain→response (доменные структуры не отдаются напрямую).
 Приёмка: `go test ./internal/catalog/transport/http/ -run TestListHandler -v` → PASS.
 
 **28. `transport/http` — handler карточки + ETag**
-RED: (а) валидный UUID → 200 полная карточка; (б) невалидный UUID → 400, не 500; (в) ETag от `updated_at`+id, повтор с `If-None-Match` → 304 пустое тело; (г) 404 для неизвестного id.
+RED:
+- (а) валидный UUID → 200 полная карточка
+- (б) невалидный UUID → 400, не 500
+- (в) ETag от `updated_at`+id, повтор с `If-None-Match` → 304 пустое тело
+- (г) 404 для неизвестного id
+
 Приёмка: `go test ./internal/catalog/transport/http/ -run TestGetHandler -v` → PASS на 4 кейсах.
 
 **29. `cmd/api` — регистрация маршрутов + сквозной smoke-тест**
@@ -283,15 +413,28 @@ RED: реальный usecase поверх фейкового репо, `GET /ap
 
 **30. `cmd/devseed` — перенос демо-данных из `web/lib/data.ts`**
 Что: сидер переносит 9 институций со всеми полями/персоналом/достижениями/галереей/alumni/новостями (`INSTITUTIONS`, `ALL_STAFF` в `web/lib/data.ts`). Отказывает при `APP_ENV != dev`. Идемпотентен (upsert по стабильному `seed_ref` в `platform.seed_refs`).
-RED (integration): (а) после первого прогона — 9 approved-институций; (б) повторный прогон — по-прежнему 9; (в) `APP_ENV=prod` → ошибка, ничего не записано.
+RED (integration):
+- (а) после первого прогона — 9 approved-институций
+- (б) повторный прогон — по-прежнему 9
+- (в) `APP_ENV=prod` → ошибка, ничего не записано
+
 Приёмка: `go test -tags=integration ./cmd/devseed/ -v` → PASS; `make seed && curl ... | jq '.items|length'` → `9`. С этой задачи в CI появляется первый реальный сид — добавить прогон `migrate-up → seed → migrate-down → migrate-up` (не только на пустой схеме, как в задачах 11/17-19), ловит миграции, технически валидные на пустой БД, но потенциально падающие на заполненной.
 
 **31. Redis-кэш списка + singleflight + проверка p95**
-RED (in-memory фейк кэша): (а) второй идентичный запрос не доходит до репо; (б) разные фильтры → разные ключи; (в) 50 параллельных одинаковых запросов при холодном кэше → репо вызван 1 раз (singleflight, под `-race`); (г) ошибка Redis не ломает запрос — деградация к прямому чтению из БД (кэш не точка отказа).
+RED (in-memory фейк кэша):
+- (а) второй идентичный запрос не доходит до репо
+- (б) разные фильтры → разные ключи
+- (в) 50 параллельных одинаковых запросов при холодном кэше → репо вызван 1 раз (singleflight, под `-race`)
+- (г) ошибка Redis не ломает запрос — деградация к прямому чтению из БД (кэш не точка отказа)
+
 GREEN: декоратор `CachedService` поверх `Service`, ключ `catalog:list:v{version}:{sha256(normalized_filter)}`, TTL 60с, версия из `catalog:version` (инкрементируется записью в вехе 3).
 Приёмка: `go test -race ./internal/catalog/usecase/ -run TestCache -v` → PASS; `hey -z 30s -c 50 'http://localhost:8080/api/v1/institutions?region=dushanbe'` → p95 ниже 300мс, зафиксировать в `backend/docs/perf-baseline.md`.
 
-**Критерий готовности вехи 1:** все тесты зелёные под `-race`; `hey` подтверждает p95≤300мс на сидовых данных; фронт может заменить `useVisibleInstitutions()` (`web/lib/app-state.tsx`) на fetch к API без потери отображаемых полей; линт и govulncheck чистые.
+**Критерий готовности вехи 1:**
+- все тесты зелёные под `-race`
+- `hey` подтверждает p95≤300мс на сидовых данных
+- фронт может заменить `useVisibleInstitutions()` (`web/lib/app-state.tsx`) на fetch к API без потери отображаемых полей
+- линт и govulncheck чистые
 
 ---
 
@@ -313,7 +456,12 @@ GREEN: декоратор `CachedService` поверх `Service`, ключ `cata
 
 **E2.7 Anti-bruteforce.** Rate limit на `/auth/login` по email и IP, экспоненциальная задержка, блокировка на 15 мин после N попыток; события в audit без пароля, email маскируется в логах (например `a***@example.com`).
 
-**Критерии готовности:** матричный тест ролей зелёный; тест reuse-detection refresh-токена зелёный; тест «FK не заменяет проверку approved-статуса» (привязка к `pending`-институции должна быть отклонена usecase, не только полагаться на FK); ни один тест не пишет PII в лог (grep-проверка тестового вывода); `-race` чистый.
+**Критерии готовности:**
+- матричный тест ролей зелёный
+- тест reuse-detection refresh-токена зелёный
+- тест «FK не заменяет проверку approved-статуса» (привязка к `pending`-институции должна быть отклонена usecase, не только полагаться на FK)
+- ни один тест не пишет PII в лог (grep-проверка тестового вывода)
+- `-race` чистый
 
 ---
 
@@ -321,11 +469,16 @@ GREEN: декоратор `CachedService` поверх `Service`, ключ `cata
 
 **E3.1 Пакет `internal/moderation`.** Схема `moderation.audit_log` (`actor_type ∈ {user,system}` — системные действия велосити-детектора/таймаут-джобов не имеют человека-актора, `actor_id NULL` для них, `actor_role`, `action`, `target_type`, `target_id`, `reason_code`/`reason_text`, `payload_diff JSONB`, `request_id`, `created_at`). Порт `moderation.Recorder.Record(ctx, tx, Entry) error` — принимает транзакцию (запись audit физически невозможна вне транзакции изменения). Здесь же — очередь модерации с claim-паттерном (`claimed_by`, `claimed_at`, `priority`, `flagged_reason`) — см. раздел «Модерация — дизайн» выше.
 
-**E3.2 Пакет `internal/platform/idempotency`.** `platform.idempotency_keys` (`key`,`endpoint`,`user_id` nullable,`request_hash`,`status ∈ {in_progress,completed}`,`response_status`,`response_body`,`created_at`, UNIQUE(`key`,`endpoint`)). Строка вставляется со статусом `in_progress` ДО выполнения операции — атомарный INSERT работает как распределённая блокировка против гонки параллельных повторов (два одновременных ретрая не оба проходят проверку). Тот же ключ+тело, статус `completed` → сохранённый ответ; тот же ключ+другое тело → 422 `idempotency_key_reuse`; тот же ключ, статус всё ещё `in_progress` → 409 (уже обрабатывается). TTL 24ч. `user_id` nullable — нужен для анонимных мутирующих эндпоинтов (`/auth/register`). Переиспользуется в вехах 4-5.
+**E3.2 Пакет `internal/platform/idempotency`.** `platform.idempotency_keys` (`key`,`endpoint`,`user_id` nullable,`request_hash`,`status ∈ {in_progress,completed}`,`response_status`,`response_body`,`created_at`, UNIQUE(`key`,`endpoint`)). Строка вставляется со статусом `in_progress` ДО выполнения операции — атомарный INSERT работает как распределённая блокировка против гонки параллельных повторов (два одновременных ретрая не оба проходят проверку).
+- тот же ключ+тело, статус `completed` → сохранённый ответ
+- тот же ключ+другое тело → 422 `idempotency_key_reuse`
+- тот же ключ, статус всё ещё `in_progress` → 409 (уже обрабатывается)
+
+TTL 24ч. `user_id` nullable — нужен для анонимных мутирующих эндпоинтов (`/auth/register`). Переиспользуется в вехах 4-5.
 
 **E3.3 Регистрация институции.** `POST /api/v1/institutions` (роль `user`/`institution`), `moderation_status='pending'`, владелец в `catalog.institution_owners`. Идемпотентность — два независимых механизма: (1) `Idempotency-Key` защищает от повтора одного и того же HTTP-запроса (сетевой ретрай); (2) частичный `UNIQUE(lower(name->>'ru'), region, district) WHERE moderation_status<>'rejected'` в схеме защищает от осознанного двойного сабмита формы без заголовка (дубль-клик) — конфликт возвращает `institution_already_registered`. Форма — минимум из `RegisterInstitutionInput` (`web/lib/app-state.tsx:31+`), остальное — дефолты.
 
-**E3.4 Редактирование профиля.** `PATCH /api/v1/institutions/{id}` — владелец или модератор. **Оптимистическая блокировка — единственный механизм, ETag на базе `updated_at`**: клиент обязан прислать `If-Match` со значением ETag, полученным на последнем `GET` (тот же ETag из задачи 28). Handler пересчитывает текущий ETag из актуального `updated_at`, сверяет с `If-Match` — не совпадает → `412 Precondition Failed`, конкурентная правка не «последний победил». Один HTTP-native механизм на чтение (`If-None-Match`/304) и запись (`If-Match`/412) — клиенту не нужно отдельно отслеживать версию помимо того, что уже вернул `GET`. Частичное обновление: `nil` = не трогать, явный JSON `null` = очистить (нужен custom-unmarshal, отдельная задача при реализации).
+**E3.4 Редактирование профиля.** `PATCH /api/v1/institutions/{id}` — владелец или модератор. **Оптимистическая блокировка — единственный механизм, ETag на базе `updated_at`**: клиент обязан прислать `If-Match` со значением ETag, полученным на последнем `GET` (тот же ETag из задачи 28). Handler пересчитывает текущий ETag из актуального `updated_at`, сверяет с `If-Match` — не совпадает → `412 Precondition Failed`, конкурентная правка не «последний победил». Один HTTP-native механизм на чтение (`If-None-Match`/304) и запись (`If-Match`/412) — клиенту не нужно отдельно отслеживать версию помимо того, что уже вернул `GET`. Частичное обновление: `nil` = не трогать, явный JSON `null` = очистить (нужен custom-unmarshal, отдельная задача при реализации). **Инвариант для всех сателлитных таблиц карточки** (`institution_staff`/`gallery`/`alumni`/`achievements`/`institution_transport_routes`/`institution_meal_plans`): мутация любой из них обязана поднимать `institutions.updated_at` в той же транзакции (Unit of Work) — иначе ETag карточки не отражает изменившееся содержимое. Ни одна из этих таблиц не версионируется по отдельности (только `created_at`, у некоторых плюс `sort_order` для порядка отображения) — `institutions.updated_at` остаётся единственным источником версии для всей карточки.
 
 **E3.5 Модерация.** `POST /api/v1/moderation/institutions/{id}/approve|reject` (роль `moderator`/`admin`, обязательный структурированный `reason` для reject — без апелляции, см. раздел выше), `GET /api/v1/moderation/queue` (одна общая очередь, claim-эндпоинт). Каждое действие — транзакция {смена статуса + audit + инвалидация кэша + уведомление актору}. Верификация владельца профиля (FR-34): `POST /api/v1/institutions/{id}/owner-verification` (учреждение подаёт документ или запрашивает `manual_exception`) + `POST /api/v1/moderation/owner-verifications/{id}/approve|reject` (модератор) — материализует решение в `catalog.institution_owner_verifications` (документ, тип документа, заметки модератора, история всех попыток). По закону РТ о лицензировании государственные детсады и школы (начальное/основное/общее среднее образование) лицензированию не подлежат вообще — лицензия нужна только частным организациям (лицеи/гимназии/колледжи/вузы/частные центры). `document_type` отражает это: `license`, `state_status_confirmation` (для госучреждений), `appointment_proof`, `business_registration`, `manual_exception` (для мелких центров без формальных документов, с обязательным `verification_notes` — письменным обоснованием модератора), `other`.
 

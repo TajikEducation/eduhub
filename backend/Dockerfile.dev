@@ -1,0 +1,13 @@
+# syntax=docker/dockerfile:1
+# Dev-образ с hot-reload (air). НЕ для деплоя — см. Dockerfile (distroless, прод).
+FROM golang:1.26.6
+
+WORKDIR /src
+
+# Только go.mod/go.sum — кэшируемый слой, независим от исходников (те приходят через volume).
+COPY go.mod go.sum ./
+RUN go mod download
+
+EXPOSE 8080
+
+ENTRYPOINT ["go", "tool", "air", "-c", ".air.toml"]

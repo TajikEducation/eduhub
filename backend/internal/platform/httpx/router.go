@@ -30,13 +30,16 @@ func (rt *Router) Handle(pattern string, handler http.Handler) {
 // возвращает пустой pattern в обоих случаях (не совпал путь / не совпал метод) — единственный
 // надёжный сигнал, какой из них произошёл, это статус, который internal-хендлер сам выставит.
 func (rt *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	h, pattern := rt.mux.Handler(r)
+	_, pattern := rt.mux.Handler(r)
 	if pattern != "" {
-		h.ServeHTTP(w, r)
+		// Настоящий диспатч — только mux.ServeHTTP() заполняет r.Pattern/PathValue,
+		// mux.Handler() документированно этого не делает (см. комментарий в net/http).
+		rt.mux.ServeHTTP(w, r)
 		return
 	}
 
 	probe := &statusProbe{}
+	h, _ := rt.mux.Handler(r)
 	h.ServeHTTP(probe, r)
 
 	if probe.status == http.StatusMethodNotAllowed {

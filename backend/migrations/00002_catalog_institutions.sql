@@ -1,0 +1,41 @@
+-- +goose Up
+CREATE TABLE catalog.institutions (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name                JSONB NOT NULL,
+    types               TEXT[] NOT NULL,
+    region              TEXT NOT NULL CHECK (region IN ('dushanbe', 'sughd', 'khatlon', 'gbao', 'rrp')),
+    city                JSONB,
+    district            TEXT,
+    description         JSONB,
+    address             JSONB,
+    geo                 GEOGRAPHY(Point, 4326) NOT NULL,
+    location_landmarks  TEXT,
+    phone               TEXT,
+    email               TEXT,
+    website             TEXT,
+    socials             JSONB,
+    cover_photo_s3_key  TEXT,
+    age_range           TEXT,
+    tag                 JSONB,
+    license_no          TEXT,
+    languages           TEXT[],
+    program_level       TEXT[],
+    curriculum          TEXT[],
+    price               INT,
+    discount_available  BOOL NOT NULL DEFAULT false,
+    discount_type       TEXT[],
+    discount_details    TEXT,
+    verified            BOOL NOT NULL DEFAULT false,
+    moderation_status   TEXT NOT NULL DEFAULT 'pending' CHECK (moderation_status IN ('pending', 'approved', 'rejected')),
+    plan                TEXT NOT NULL DEFAULT 'free',
+    plan_expires_at     TIMESTAMPTZ,
+    founded             INT,
+    students_count      INT,
+    rating_avg          NUMERIC(3, 2),
+    review_count        INT NOT NULL DEFAULT 0,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- +goose Down
+DROP TABLE catalog.institutions;
