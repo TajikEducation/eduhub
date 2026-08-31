@@ -30,6 +30,10 @@ type Config struct {
 	ArgonMemoryKiB   uint32
 	ArgonIterations  uint32
 	ArgonParallelism uint8
+
+	// JWTSecret — ключ подписи access-токенов HS256 (E2.3). Обязателен: у секрета подписи
+	// нет безопасного дефолта, в отличие от параметров стоимости хеширования.
+	JWTSecret string
 }
 
 // Load читает конфигурацию из ENV, возвращает ошибку при отсутствии обязательной переменной.
@@ -41,6 +45,7 @@ func Load() (Config, error) {
 		RedisAddr:          os.Getenv("REDIS_ADDR"),
 		LogLevel:           os.Getenv("LOG_LEVEL"),
 		CORSAllowedOrigins: parseCORSAllowedOrigins(os.Getenv("CORS_ALLOWED_ORIGINS")),
+		JWTSecret:          os.Getenv("JWT_SECRET"),
 	}
 
 	if cfg.DatabaseURL == "" {
@@ -49,6 +54,10 @@ func Load() (Config, error) {
 
 	if cfg.RedisAddr == "" {
 		return Config{}, fmt.Errorf("config: REDIS_ADDR is required")
+	}
+
+	if cfg.JWTSecret == "" {
+		return Config{}, fmt.Errorf("config: JWT_SECRET is required")
 	}
 
 	if cfg.HTTPAddr == "" {

@@ -16,6 +16,7 @@ func TestLoad_AllVarsSet(t *testing.T) {
 	t.Setenv("LOG_LEVEL", "debug")
 	t.Setenv("SHUTDOWN_TIMEOUT", "15s")
 	t.Setenv("REDIS_ADDR", "localhost:6380")
+	t.Setenv("JWT_SECRET", "test-secret")
 
 	cfg, err := config.Load()
 	if err != nil {
@@ -40,6 +41,9 @@ func TestLoad_AllVarsSet(t *testing.T) {
 	if cfg.RedisAddr != "localhost:6380" {
 		t.Errorf("RedisAddr = %q, want %q", cfg.RedisAddr, "localhost:6380")
 	}
+	if cfg.JWTSecret != "test-secret" { //nolint:gosec // тестовый секрет, не реальный
+		t.Errorf("JWTSecret = %q, want %q", cfg.JWTSecret, "test-secret")
+	}
 }
 
 func TestLoad_MissingDatabaseURL(t *testing.T) {
@@ -48,6 +52,7 @@ func TestLoad_MissingDatabaseURL(t *testing.T) {
 	t.Setenv("DATABASE_URL", "")
 	t.Setenv("LOG_LEVEL", "info")
 	t.Setenv("REDIS_ADDR", "localhost:6380")
+	t.Setenv("JWT_SECRET", "test-secret")
 
 	_, err := config.Load()
 	if err == nil {
@@ -64,6 +69,7 @@ func TestLoad_MissingRedisAddr(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgres://eduhub:eduhub@localhost:5433/eduhub?sslmode=disable")
 	t.Setenv("LOG_LEVEL", "info")
 	t.Setenv("REDIS_ADDR", "")
+	t.Setenv("JWT_SECRET", "test-secret")
 
 	_, err := config.Load()
 	if err == nil {
@@ -74,12 +80,30 @@ func TestLoad_MissingRedisAddr(t *testing.T) {
 	}
 }
 
+func TestLoad_MissingJWTSecret(t *testing.T) {
+	t.Setenv("APP_ENV", "dev")
+	t.Setenv("HTTP_ADDR", ":8080")
+	t.Setenv("DATABASE_URL", "postgres://eduhub:eduhub@localhost:5433/eduhub?sslmode=disable")
+	t.Setenv("LOG_LEVEL", "info")
+	t.Setenv("REDIS_ADDR", "localhost:6380")
+	t.Setenv("JWT_SECRET", "")
+
+	_, err := config.Load()
+	if err == nil {
+		t.Fatal("Load() expected error for missing JWT_SECRET, got nil")
+	}
+	if !strings.Contains(err.Error(), "JWT_SECRET") {
+		t.Errorf("error %q does not mention JWT_SECRET", err.Error())
+	}
+}
+
 func TestLoad_DefaultHTTPAddr(t *testing.T) {
 	t.Setenv("APP_ENV", "dev")
 	t.Setenv("HTTP_ADDR", "")
 	t.Setenv("DATABASE_URL", "postgres://eduhub:eduhub@localhost:5433/eduhub?sslmode=disable")
 	t.Setenv("LOG_LEVEL", "info")
 	t.Setenv("REDIS_ADDR", "localhost:6380")
+	t.Setenv("JWT_SECRET", "test-secret")
 
 	cfg, err := config.Load()
 	if err != nil {
@@ -96,6 +120,7 @@ func TestLoad_CORSAllowedOriginsParsesCommaSeparated(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgres://eduhub:eduhub@localhost:5433/eduhub?sslmode=disable")
 	t.Setenv("LOG_LEVEL", "info")
 	t.Setenv("REDIS_ADDR", "localhost:6380")
+	t.Setenv("JWT_SECRET", "test-secret")
 	t.Setenv("CORS_ALLOWED_ORIGINS", "http://localhost:3000, https://eduhub.tj")
 
 	cfg, err := config.Load()
@@ -115,6 +140,7 @@ func TestLoad_CORSAllowedOriginsUnsetIsEmpty(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgres://eduhub:eduhub@localhost:5433/eduhub?sslmode=disable")
 	t.Setenv("LOG_LEVEL", "info")
 	t.Setenv("REDIS_ADDR", "localhost:6380")
+	t.Setenv("JWT_SECRET", "test-secret")
 	t.Setenv("CORS_ALLOWED_ORIGINS", "")
 
 	cfg, err := config.Load()
@@ -130,6 +156,7 @@ func TestLoad_ArgonParamsUnsetAreZero(t *testing.T) {
 	t.Setenv("APP_ENV", "dev")
 	t.Setenv("DATABASE_URL", "postgres://eduhub:eduhub@localhost:5433/eduhub?sslmode=disable")
 	t.Setenv("REDIS_ADDR", "localhost:6380")
+	t.Setenv("JWT_SECRET", "test-secret")
 	t.Setenv("ARGON_MEMORY_KIB", "")
 	t.Setenv("ARGON_ITERATIONS", "")
 	t.Setenv("ARGON_PARALLELISM", "")
@@ -148,6 +175,7 @@ func TestLoad_ArgonParamsParsesSetValues(t *testing.T) {
 	t.Setenv("APP_ENV", "dev")
 	t.Setenv("DATABASE_URL", "postgres://eduhub:eduhub@localhost:5433/eduhub?sslmode=disable")
 	t.Setenv("REDIS_ADDR", "localhost:6380")
+	t.Setenv("JWT_SECRET", "test-secret")
 	t.Setenv("ARGON_MEMORY_KIB", "65536")
 	t.Setenv("ARGON_ITERATIONS", "3")
 	t.Setenv("ARGON_PARALLELISM", "4")
@@ -171,6 +199,7 @@ func TestLoad_ArgonMemoryKiBInvalid_ReturnsError(t *testing.T) {
 	t.Setenv("APP_ENV", "dev")
 	t.Setenv("DATABASE_URL", "postgres://eduhub:eduhub@localhost:5433/eduhub?sslmode=disable")
 	t.Setenv("REDIS_ADDR", "localhost:6380")
+	t.Setenv("JWT_SECRET", "test-secret")
 	t.Setenv("ARGON_MEMORY_KIB", "не-число")
 
 	_, err := config.Load()

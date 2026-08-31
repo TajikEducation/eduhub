@@ -90,10 +90,11 @@ jobs:
         env:
           APP_ENV: dev
           DATABASE_URL: postgres://eduhub:eduhub@localhost:5432/eduhub_test?sslmode=disable
-          # cmd/devseed никогда не обращается к Redis — но config.Load() общий с cmd/api и
-          # требует REDIS_ADDR безусловно (задача 31), поэтому значение обязано быть непустым
-          # здесь тоже, реальная связь не нужна.
+          # cmd/devseed никогда не обращается к Redis/JWT — но config.Load() общий с cmd/api
+          # и требует оба значения безусловно (задачи 31, E2.3), поэтому оба обязаны быть
+          # непустыми здесь тоже, реальная связь/подпись не нужны.
           REDIS_ADDR: localhost:6379
+          JWT_SECRET: ci-only-not-a-real-secret
 
       - run: go tool govulncheck ./...
 
