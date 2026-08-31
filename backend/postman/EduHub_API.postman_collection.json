@@ -1,0 +1,529 @@
+{
+  "info": {
+    "name": "EduHub API",
+    "description": "Публичный API бэкенда EduHub. Веха 0 (платформа) + веха 1 (Catalog read-path). Обновляй по мере добавления эндпоинтов в новых вехах (auth, write-эндпоинты каталога, reviews, communications, analytics).\n\nПеред использованием: `docker compose up -d --build` в корне репозитория, `make seed` в `backend/` для демо-данных (9 институций). `base_url` по умолчанию — `http://localhost:8080` (порт из `backend/docker-compose.yml`/`.env.example`).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "institution_id",
+      "value": "",
+      "type": "string",
+      "description": "Заполняется автоматически тестом запроса 'Список институций → базовый' (первый items[0].id)."
+    },
+    {
+      "key": "next_cursor",
+      "value": "",
+      "type": "string",
+      "description": "Заполняется автоматически тестом запроса 'Пагинация → страница 1'."
+    },
+    {
+      "key": "etag",
+      "value": "",
+      "type": "string",
+      "description": "Заполняется автоматически тестом запроса 'Карточка → получить ETag'."
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET /healthz",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/healthz",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "healthz"
+              ]
+            },
+            "description": "Живость процесса — без обращения к БД/Redis. Всегда 200, если процесс жив."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /readyz",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/readyz",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "readyz"
+              ]
+            },
+            "description": "Готовность обслуживать трафик — проверяет зависимости (Postgres). 200 если все зависимости отвечают, 503 + имя упавшей зависимости иначе. Redis намеренно НЕ входит в эту проверку (кэш деградирует, не блокирует готовность — см. docs/EduHub_Backend_Development_Plan.md, задача 31)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK (все зависимости живы)', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Catalog — List",
+      "item": [
+        {
+          "name": "Список институций → базовый",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/institutions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "institutions"
+              ]
+            },
+            "description": "Без фильтров — дефолтный limit=20, только moderation_status=approved (форсируется сервисом, не query-параметром)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('тело содержит items[]', () => pm.expect(body.items).to.be.an('array'));",
+                  "pm.test('items[] непустой (нужен make seed)', () => pm.expect(body.items.length).to.be.above(0));",
+                  "pm.test('пустой items был бы [], не null (контракт)', () => pm.expect(body.items).to.not.be.null);",
+                  "if (body.items.length > 0) {",
+                  "  pm.collectionVariables.set('institution_id', body.items[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Фильтры → регион + программа + цена + сортировка",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/institutions?region=dushanbe&curriculum=bilingual,state&min_price=100&max_price=1000&sort=price_asc",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "institutions"
+              ],
+              "query": [
+                {
+                  "key": "region",
+                  "value": "dushanbe"
+                },
+                {
+                  "key": "curriculum",
+                  "value": "bilingual,state",
+                  "description": "Пересечение (SQL &&) — институция матчит хотя бы по одному значению, не по всем сразу."
+                },
+                {
+                  "key": "min_price",
+                  "value": "100"
+                },
+                {
+                  "key": "max_price",
+                  "value": "1000"
+                },
+                {
+                  "key": "sort",
+                  "value": "price_asc",
+                  "description": "Допустимые значения сейчас: '', 'price_asc', 'score'."
+                }
+              ]
+            },
+            "description": "Комбинация фасетных фильтров каталога (FR-01) + сортировка по возрастанию цены."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('все результаты — регион dushanbe', () => {",
+                  "  body.items.forEach(i => pm.expect(i.region).to.eql('dushanbe'));",
+                  "});",
+                  "pm.test('цены отсортированы по возрастанию', () => {",
+                  "  const prices = body.items.map(i => i.price).filter(p => p !== null && p !== undefined);",
+                  "  for (let k = 1; k < prices.length; k++) pm.expect(prices[k]).to.be.at.least(prices[k-1]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Гео-поиск → рядом с центром Душанбе",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/institutions?lat=38.5598&lng=68.7870&radius_km=15&sort=score",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "institutions"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "38.5598"
+                },
+                {
+                  "key": "lng",
+                  "value": "68.7870"
+                },
+                {
+                  "key": "radius_km",
+                  "value": "15"
+                },
+                {
+                  "key": "sort",
+                  "value": "score"
+                }
+              ]
+            },
+            "description": "PostGIS ST_DWithin. lat/lng заданы вместе — по одному без другого вернёт 400 (см. кейс 'Ошибка → lat без lng')."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('у результатов есть distance_m (гео запрошен)', () => {",
+                  "  body.items.forEach(i => pm.expect(i).to.have.property('distance_m'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Пагинация → страница 1 (limit=2)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/institutions?limit=2&sort=score",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "institutions"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "2"
+                },
+                {
+                  "key": "sort",
+                  "value": "score",
+                  "description": "Явный sort обязателен: пагинация с пустым/дефолтным sort сейчас НЕ строит next_cursor даже когда есть ещё страницы (см. internal/catalog/repo/postgres/postgres.go — switch f.Sort обрабатывает только price_asc/score) — известный пробел, зафиксирован отдельно, не в этой коллекции."
+                }
+              ]
+            },
+            "description": "Keyset-курсор, не OFFSET. next_cursor сохраняется в переменную коллекции для следующего запроса. sort=score указан явно — см. описание параметра sort."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('не больше 2 записей', () => pm.expect(body.items.length).to.be.at.most(2));",
+                  "if (body.next_cursor) pm.collectionVariables.set('next_cursor', body.next_cursor);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Пагинация → страница 2 (по сохранённому cursor)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/institutions?limit=2&sort=score&cursor={{next_cursor}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "institutions"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "2"
+                },
+                {
+                  "key": "sort",
+                  "value": "score"
+                },
+                {
+                  "key": "cursor",
+                  "value": "{{next_cursor}}"
+                }
+              ]
+            },
+            "description": "Выполнять ПОСЛЕ 'Пагинация → страница 1' в том же прогоне — иначе next_cursor пуст."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ошибка → sort невалиден (400)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/institutions?sort=price_desc",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "institutions"
+              ],
+              "query": [
+                {
+                  "key": "sort",
+                  "value": "price_desc",
+                  "description": "Не реализовано сейчас — только 'price_asc'/'score' (см. parseSort)."
+                }
+              ]
+            },
+            "description": "Демонстрирует единый формат ошибки apperr.Invalid с полем."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('400 Invalid', () => pm.response.to.have.status(400));",
+                  "const body = pm.response.json();",
+                  "pm.test('есть request_id в теле ошибки', () => pm.expect(body).to.have.property('request_id'));",
+                  "pm.test('поле sort указано как невалидное', () => pm.expect(body.error.fields).to.have.property('sort'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ошибка → lat без lng (400)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/institutions?lat=38.5",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "institutions"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "38.5"
+                }
+              ]
+            },
+            "description": "Межполевой инвариант domain.Filter.Validate() — lat требует lng и наоборот."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('400 Invalid', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Catalog — Get by ID",
+      "item": [
+        {
+          "name": "Карточка → получить ETag",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/institutions/{{institution_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "institutions",
+                "{{institution_id}}"
+              ]
+            },
+            "description": "Требует institution_id — выполни сначала 'Список институций → базовый' в этой же коллекции, он заполнит переменную. Сохраняет ETag ответа в переменную коллекции для следующего запроса (If-None-Match)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const etag = pm.response.headers.get('ETag');",
+                  "pm.test('ответ содержит ETag', () => pm.expect(etag).to.not.be.undefined);",
+                  "if (etag) pm.collectionVariables.set('etag', etag);",
+                  "const body = pm.response.json();",
+                  "pm.test('полная карточка содержит staff[]', () => pm.expect(body.staff).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Карточка → 304 по If-None-Match (не изменилась)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/institutions/{{institution_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "institutions",
+                "{{institution_id}}"
+              ]
+            },
+            "header": [
+              {
+                "key": "If-None-Match",
+                "value": "{{etag}}"
+              }
+            ],
+            "description": "Выполнять ПОСЛЕ 'Карточка → получить ETag' в том же прогоне. Пустое тело, статус 304 — карточка не менялась с последнего GET."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('304 Not Modified', () => pm.response.to.have.status(304));",
+                  "pm.test('тело пустое', () => pm.expect(pm.response.text()).to.have.lengthOf(0));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ошибка → институция не найдена (404)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/institutions/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "institutions",
+                "00000000-0000-0000-0000-000000000000"
+              ]
+            },
+            "description": "Валидный UUID, но не существует (и pending/rejected институции тоже дают 404, не 403 — публичный каталог не раскрывает их существование)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('404 NotFound', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ошибка → невалидный UUID (400, не 500)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/institutions/not-a-uuid",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "institutions",
+                "not-a-uuid"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('400 Invalid (не 500)', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
