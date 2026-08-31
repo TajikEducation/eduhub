@@ -35,6 +35,91 @@ func (r *countingRepo) List(ctx context.Context, filter domain.Filter) (domain.L
 	return r.result, r.err
 }
 
+func (r *countingRepo) Create(_ context.Context, inst domain.Institution, _ uuid.UUID) (domain.Institution, error) {
+	return inst, nil
+}
+
+func (r *countingRepo) Update(_ context.Context, _ uuid.UUID, _ domain.UpdateInstitutionInput) (domain.Institution, error) {
+	return domain.Institution{}, nil
+}
+
+func (r *countingRepo) Exists(_ context.Context, _ uuid.UUID) (bool, error) {
+	return true, nil
+}
+
+func (r *countingRepo) UpdateRatingAvg(_ context.Context, _ uuid.UUID, _ float64, _ int) error {
+	return nil
+}
+
+func (r *countingRepo) ListByOwner(_ context.Context, _ uuid.UUID) ([]domain.Institution, error) {
+	return nil, nil
+}
+
+func (r *countingRepo) GetOwnerID(_ context.Context, _ uuid.UUID) (uuid.UUID, error) {
+	return uuid.UUID{}, nil
+}
+
+func (r *countingRepo) SetModerationStatus(_ context.Context, _ uuid.UUID, _ string) error {
+	return nil
+}
+
+func (r *countingRepo) CreateStaff(_ context.Context, _ uuid.UUID, in domain.CreateStaffInput) (domain.StaffMember, error) {
+	return domain.StaffMember{Name: in.Name, RoleType: in.RoleType, RoleLabel: in.RoleLabel}, nil
+}
+func (r *countingRepo) UpdateStaff(_ context.Context, id uuid.UUID, in domain.CreateStaffInput) (domain.StaffMember, error) {
+	return domain.StaffMember{ID: id}, nil
+}
+func (r *countingRepo) DeleteStaff(_ context.Context, _ uuid.UUID) error { return nil }
+func (r *countingRepo) GetStaffInstitutionID(_ context.Context, _ uuid.UUID) (uuid.UUID, error) {
+	return uuid.UUID{}, nil
+}
+func (r *countingRepo) GetPublicStaffByID(_ context.Context, _ uuid.UUID) (domain.StaffMember, error) {
+	return domain.StaffMember{}, nil
+}
+func (r *countingRepo) CreateAchievement(_ context.Context, institutionID uuid.UUID, in domain.CreateAchievementInput) (domain.Achievement, error) {
+	return domain.Achievement{OwnerID: institutionID, Title: in.Title}, nil
+}
+func (r *countingRepo) DeleteAchievement(_ context.Context, _ uuid.UUID) error { return nil }
+func (r *countingRepo) GetAchievementInstitutionID(_ context.Context, _ uuid.UUID) (uuid.UUID, error) {
+	return uuid.UUID{}, nil
+}
+func (r *countingRepo) CreateGalleryItem(_ context.Context, _ uuid.UUID, in domain.CreateGalleryItemInput) (domain.GalleryItem, error) {
+	return domain.GalleryItem{S3Key: in.S3Key}, nil
+}
+func (r *countingRepo) DeleteGalleryItem(_ context.Context, _ uuid.UUID) error { return nil }
+func (r *countingRepo) GetGalleryItemInstitutionID(_ context.Context, _ uuid.UUID) (uuid.UUID, error) {
+	return uuid.UUID{}, nil
+}
+func (r *countingRepo) CreateAlumnus(_ context.Context, _ uuid.UUID, in domain.CreateAlumnusInput) (domain.Alumnus, error) {
+	return domain.Alumnus{Name: in.Name}, nil
+}
+func (r *countingRepo) DeleteAlumnus(_ context.Context, _ uuid.UUID) error { return nil }
+func (r *countingRepo) GetAlumnusInstitutionID(_ context.Context, _ uuid.UUID) (uuid.UUID, error) {
+	return uuid.UUID{}, nil
+}
+func (r *countingRepo) CreateNews(_ context.Context, _ uuid.UUID, in domain.CreateNewsInput) (domain.NewsArticle, error) {
+	return domain.NewsArticle{Title: in.Title}, nil
+}
+func (r *countingRepo) UpdateNews(_ context.Context, id uuid.UUID, in domain.CreateNewsInput) (domain.NewsArticle, error) {
+	return domain.NewsArticle{ID: id}, nil
+}
+func (r *countingRepo) DeleteNews(_ context.Context, _ uuid.UUID) error { return nil }
+func (r *countingRepo) GetNewsInstitutionID(_ context.Context, _ uuid.UUID) (uuid.UUID, error) {
+	return uuid.UUID{}, nil
+}
+
+func (r *countingRepo) ListNews(_ context.Context, _ uuid.UUID) ([]domain.NewsArticle, error) {
+	return nil, nil
+}
+
+func (r *countingRepo) ListPublishedNews(_ context.Context, _ uuid.UUID) ([]domain.NewsArticle, error) {
+	return nil, nil
+}
+
+func (r *countingRepo) GetPublishedNewsByID(_ context.Context, _ uuid.UUID) (domain.NewsArticle, error) {
+	return domain.NewsArticle{}, nil
+}
+
 func (r *countingRepo) GetByID(_ context.Context, _ uuid.UUID) (domain.Institution, error) {
 	return domain.Institution{}, nil
 }

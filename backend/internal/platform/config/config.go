@@ -11,6 +11,9 @@ import (
 const (
 	defaultHTTPAddr        = ":8080"
 	defaultShutdownTimeout = 10 * time.Second
+	// defaultAccessTTL/defaultRefreshTTL — см. SRS Веха 2, E2.3 (access 15 мин, refresh 30 дней).
+	defaultAccessTTL  = 15 * time.Minute
+	defaultRefreshTTL = 30 * 24 * time.Hour
 )
 
 // Config — конфигурация бэкенда.
@@ -22,6 +25,9 @@ type Config struct {
 	LogLevel           string
 	ShutdownTimeout    time.Duration
 	CORSAllowedOrigins []string
+	JWTSecret          string
+	AccessTokenTTL     time.Duration
+	RefreshTokenTTL    time.Duration
 }
 
 // Load читает конфигурацию из ENV, возвращает ошибку при отсутствии обязательной переменной.
@@ -43,8 +49,31 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("config: REDIS_ADDR is required")
 	}
 
+	cfg.JWTSecret = os.Getenv("JWT_SECRET")
+	if cfg.JWTSecret == "" {
+		return Config{}, fmt.Errorf("config: JWT_SECRET is required")
+	}
+
 	if cfg.HTTPAddr == "" {
 		cfg.HTTPAddr = defaultHTTPAddr
+	}
+
+	cfg.AccessTokenTTL = defaultAccessTTL
+	if raw := os.Getenv("ACCESS_TOKEN_TTL"); raw != "" {
+		d, err := time.ParseDuration(raw)
+		if err != nil {
+			return Config{}, fmt.Errorf("config: invalid ACCESS_TOKEN_TTL %q: %w", raw, err)
+		}
+		cfg.AccessTokenTTL = d
+	}
+
+	cfg.RefreshTokenTTL = defaultRefreshTTL
+	if raw := os.Getenv("REFRESH_TOKEN_TTL"); raw != "" {
+		d, err := time.ParseDuration(raw)
+		if err != nil {
+			return Config{}, fmt.Errorf("config: invalid REFRESH_TOKEN_TTL %q: %w", raw, err)
+		}
+		cfg.RefreshTokenTTL = d
 	}
 
 	shutdownTimeoutRaw := os.Getenv("SHUTDOWN_TIMEOUT")

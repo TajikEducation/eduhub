@@ -39,6 +39,8 @@ type institutionListItemDTO struct {
 	DiscountAvailable bool          `json:"discount_available"`
 	CoverPhotoS3Key   *string       `json:"cover_photo_s3_key,omitempty"`
 	Tag               *bilingualDTO `json:"tag,omitempty"`
+	Lat               float64       `json:"lat"`
+	Lng               float64       `json:"lng"`
 	// DistanceM — omitempty критично: nil означает «гео в фильтре не запрашивался», не «0».
 	DistanceM *float64 `json:"distance_m,omitempty"`
 }
@@ -68,6 +70,8 @@ func toListItemDTO(inst domain.Institution) institutionListItemDTO {
 		DiscountAvailable: inst.DiscountAvailable,
 		CoverPhotoS3Key:   inst.CoverPhotoS3Key,
 		Tag:               toBilingualDTOPtr(inst.Tag),
+		Lat:               inst.Lat,
+		Lng:               inst.Lng,
 		DistanceM:         inst.DistanceM,
 	}
 }
@@ -98,32 +102,36 @@ func toSocialsDTOPtr(s *domain.Socials) *socialsDTO {
 	return &socialsDTO{Instagram: s.Instagram, Telegram: s.Telegram, Facebook: s.Facebook}
 }
 
-// staffMemberDTO — педагог/персонал учреждения в публичной карточке.
+// staffMemberDTO — педагог/персонал учреждения в публичной карточке. InstitutionID заполняется
+// только в ответе GET /api/v1/staff/{id} (публичный профиль сотрудника, страница /people/{id}
+// на фронте) — при вложении в institutionDTO.Staff он избыточен (institution уже известна из URL).
 type staffMemberDTO struct {
-	ID        uuid.UUID     `json:"id"`
-	Name      bilingualDTO  `json:"name"`
-	RoleType  string        `json:"role_type"`
-	RoleLabel bilingualDTO  `json:"role_label"`
-	Subject   *bilingualDTO `json:"subject,omitempty"`
-	PhotoURL  *string       `json:"photo_url,omitempty"`
-	Exp       *string       `json:"exp,omitempty"`
-	Bio       *bilingualDTO `json:"bio,omitempty"`
-	Email     *string       `json:"email,omitempty"`
-	Phone     *string       `json:"phone,omitempty"`
+	ID            uuid.UUID     `json:"id"`
+	InstitutionID uuid.UUID     `json:"institution_id,omitzero"`
+	Name          bilingualDTO  `json:"name"`
+	RoleType      string        `json:"role_type"`
+	RoleLabel     bilingualDTO  `json:"role_label"`
+	Subject       *bilingualDTO `json:"subject,omitempty"`
+	PhotoURL      *string       `json:"photo_url,omitempty"`
+	Exp           *string       `json:"exp,omitempty"`
+	Bio           *bilingualDTO `json:"bio,omitempty"`
+	Email         *string       `json:"email,omitempty"`
+	Phone         *string       `json:"phone,omitempty"`
 }
 
 func toStaffMemberDTO(m domain.StaffMember) staffMemberDTO {
 	return staffMemberDTO{
-		ID:        m.ID,
-		Name:      toBilingualDTO(m.Name),
-		RoleType:  m.RoleType,
-		RoleLabel: toBilingualDTO(m.RoleLabel),
-		Subject:   toBilingualDTOPtr(m.Subject),
-		PhotoURL:  m.PhotoURL,
-		Exp:       m.Exp,
-		Bio:       toBilingualDTOPtr(m.Bio),
-		Email:     m.Email,
-		Phone:     m.Phone,
+		ID:            m.ID,
+		InstitutionID: m.InstitutionID,
+		Name:          toBilingualDTO(m.Name),
+		RoleType:      m.RoleType,
+		RoleLabel:     toBilingualDTO(m.RoleLabel),
+		Subject:       toBilingualDTOPtr(m.Subject),
+		PhotoURL:      m.PhotoURL,
+		Exp:           m.Exp,
+		Bio:           toBilingualDTOPtr(m.Bio),
+		Email:         m.Email,
+		Phone:         m.Phone,
 	}
 }
 
@@ -223,6 +231,35 @@ type mealPlanDTO struct {
 
 func toMealPlanDTO(m domain.MealPlan) mealPlanDTO {
 	return mealPlanDTO{ID: m.ID, MealType: m.MealType, Label: toBilingualDTOPtr(m.Label), Cost: m.Cost, CostPeriod: m.CostPeriod, Halal: m.Halal, SortOrder: m.SortOrder}
+}
+
+// newsArticleDTO — новость учреждения в кабинете (E3.x, дашборд учреждения) и на публичной
+// странице /news/{id} (там же используется InstitutionID для ссылки «назад к профилю»).
+type newsArticleDTO struct {
+	ID            uuid.UUID      `json:"id"`
+	InstitutionID uuid.UUID      `json:"institution_id"`
+	Title         bilingualDTO   `json:"title"`
+	Category      *bilingualDTO  `json:"category,omitempty"`
+	CoverS3Key    *string        `json:"cover_s3_key,omitempty"`
+	VideoURL      *string        `json:"video_url,omitempty"`
+	Content       bilingualDTO   `json:"content"`
+	Tags          []bilingualDTO `json:"tags,omitempty"`
+	Status        string         `json:"status"`
+	ViewsCount    int            `json:"views_count"`
+	CreatedAt     time.Time      `json:"created_at"`
+	UpdatedAt     time.Time      `json:"updated_at"`
+}
+
+func toNewsArticleDTO(n domain.NewsArticle) newsArticleDTO {
+	tags := make([]bilingualDTO, len(n.Tags))
+	for i, tg := range n.Tags {
+		tags[i] = toBilingualDTO(tg)
+	}
+	return newsArticleDTO{
+		ID: n.ID, InstitutionID: n.InstitutionID, Title: toBilingualDTO(n.Title), Category: toBilingualDTOPtr(n.Category),
+		CoverS3Key: n.CoverS3Key, VideoURL: n.VideoURL, Content: toBilingualDTO(n.Content),
+		Tags: tags, Status: n.Status, ViewsCount: n.ViewsCount, CreatedAt: n.CreatedAt, UpdatedAt: n.UpdatedAt,
+	}
 }
 
 // institutionDTO — полная карточка учреждения (профильная страница, FR-06). Сознательно не
@@ -339,5 +376,32 @@ func toInstitutionDTO(inst domain.Institution) institutionDTO {
 		Alumni:          alumni,
 		TransportRoutes: transportRoutes,
 		MealPlans:       mealPlans,
+	}
+}
+
+// moderationListItemDTO — карточка институции в очереди модератора/обзоре админа
+// (GET /api/v1/moderation/institutions). В отличие от institutionListItemDTO, публичного каталога,
+// включает ModerationStatus и профильные поля (адрес/телефон/email/описание) — этот эндпоинт
+// доступен только moderator/admin (rbac.RequireRole), не публичному каталогу.
+type moderationListItemDTO struct {
+	ID               uuid.UUID     `json:"id"`
+	Name             bilingualDTO  `json:"name"`
+	Types            []string      `json:"types"`
+	Region           string        `json:"region"`
+	Address          *bilingualDTO `json:"address,omitempty"`
+	Phone            *string       `json:"phone,omitempty"`
+	Email            *string       `json:"email,omitempty"`
+	Description      *bilingualDTO `json:"description,omitempty"`
+	Price            *int          `json:"price,omitempty"`
+	ModerationStatus string        `json:"moderation_status"`
+	CreatedAt        time.Time     `json:"created_at"`
+}
+
+func toModerationListItemDTO(inst domain.Institution) moderationListItemDTO {
+	return moderationListItemDTO{
+		ID: inst.ID, Name: toBilingualDTO(inst.Name), Types: inst.Types, Region: inst.Region,
+		Address: toBilingualDTOPtr(inst.Address), Phone: inst.Phone, Email: inst.Email,
+		Description: toBilingualDTOPtr(inst.Description), Price: inst.Price,
+		ModerationStatus: inst.ModerationStatus, CreatedAt: inst.CreatedAt,
 	}
 }

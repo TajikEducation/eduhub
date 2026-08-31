@@ -31,6 +31,91 @@ func (f *fakeCatalogRepo) GetByID(ctx context.Context, id uuid.UUID) (domain.Ins
 	return f.getInst, f.getErr
 }
 
+func (f *fakeCatalogRepo) Create(_ context.Context, inst domain.Institution, _ uuid.UUID) (domain.Institution, error) {
+	return inst, nil
+}
+
+func (f *fakeCatalogRepo) Update(_ context.Context, _ uuid.UUID, _ domain.UpdateInstitutionInput) (domain.Institution, error) {
+	return domain.Institution{}, nil
+}
+
+func (f *fakeCatalogRepo) Exists(_ context.Context, _ uuid.UUID) (bool, error) {
+	return true, nil
+}
+
+func (f *fakeCatalogRepo) UpdateRatingAvg(_ context.Context, _ uuid.UUID, _ float64, _ int) error {
+	return nil
+}
+
+func (f *fakeCatalogRepo) ListByOwner(_ context.Context, _ uuid.UUID) ([]domain.Institution, error) {
+	return nil, nil
+}
+
+func (f *fakeCatalogRepo) GetOwnerID(_ context.Context, _ uuid.UUID) (uuid.UUID, error) {
+	return uuid.UUID{}, nil
+}
+
+func (f *fakeCatalogRepo) SetModerationStatus(_ context.Context, _ uuid.UUID, _ string) error {
+	return nil
+}
+
+func (f *fakeCatalogRepo) CreateStaff(_ context.Context, _ uuid.UUID, in domain.CreateStaffInput) (domain.StaffMember, error) {
+	return domain.StaffMember{Name: in.Name, RoleType: in.RoleType, RoleLabel: in.RoleLabel}, nil
+}
+func (f *fakeCatalogRepo) UpdateStaff(_ context.Context, id uuid.UUID, _ domain.CreateStaffInput) (domain.StaffMember, error) {
+	return domain.StaffMember{ID: id}, nil
+}
+func (f *fakeCatalogRepo) DeleteStaff(_ context.Context, _ uuid.UUID) error { return nil }
+func (f *fakeCatalogRepo) GetStaffInstitutionID(_ context.Context, _ uuid.UUID) (uuid.UUID, error) {
+	return uuid.UUID{}, nil
+}
+func (f *fakeCatalogRepo) GetPublicStaffByID(_ context.Context, _ uuid.UUID) (domain.StaffMember, error) {
+	return domain.StaffMember{}, nil
+}
+func (f *fakeCatalogRepo) CreateAchievement(_ context.Context, institutionID uuid.UUID, in domain.CreateAchievementInput) (domain.Achievement, error) {
+	return domain.Achievement{OwnerID: institutionID, Title: in.Title}, nil
+}
+func (f *fakeCatalogRepo) DeleteAchievement(_ context.Context, _ uuid.UUID) error { return nil }
+func (f *fakeCatalogRepo) GetAchievementInstitutionID(_ context.Context, _ uuid.UUID) (uuid.UUID, error) {
+	return uuid.UUID{}, nil
+}
+func (f *fakeCatalogRepo) CreateGalleryItem(_ context.Context, _ uuid.UUID, in domain.CreateGalleryItemInput) (domain.GalleryItem, error) {
+	return domain.GalleryItem{S3Key: in.S3Key}, nil
+}
+func (f *fakeCatalogRepo) DeleteGalleryItem(_ context.Context, _ uuid.UUID) error { return nil }
+func (f *fakeCatalogRepo) GetGalleryItemInstitutionID(_ context.Context, _ uuid.UUID) (uuid.UUID, error) {
+	return uuid.UUID{}, nil
+}
+func (f *fakeCatalogRepo) CreateAlumnus(_ context.Context, _ uuid.UUID, in domain.CreateAlumnusInput) (domain.Alumnus, error) {
+	return domain.Alumnus{Name: in.Name}, nil
+}
+func (f *fakeCatalogRepo) DeleteAlumnus(_ context.Context, _ uuid.UUID) error { return nil }
+func (f *fakeCatalogRepo) GetAlumnusInstitutionID(_ context.Context, _ uuid.UUID) (uuid.UUID, error) {
+	return uuid.UUID{}, nil
+}
+func (f *fakeCatalogRepo) CreateNews(_ context.Context, _ uuid.UUID, in domain.CreateNewsInput) (domain.NewsArticle, error) {
+	return domain.NewsArticle{Title: in.Title}, nil
+}
+func (f *fakeCatalogRepo) UpdateNews(_ context.Context, id uuid.UUID, _ domain.CreateNewsInput) (domain.NewsArticle, error) {
+	return domain.NewsArticle{ID: id}, nil
+}
+func (f *fakeCatalogRepo) DeleteNews(_ context.Context, _ uuid.UUID) error { return nil }
+func (f *fakeCatalogRepo) GetNewsInstitutionID(_ context.Context, _ uuid.UUID) (uuid.UUID, error) {
+	return uuid.UUID{}, nil
+}
+
+func (f *fakeCatalogRepo) ListNews(_ context.Context, _ uuid.UUID) ([]domain.NewsArticle, error) {
+	return nil, nil
+}
+
+func (f *fakeCatalogRepo) ListPublishedNews(_ context.Context, _ uuid.UUID) ([]domain.NewsArticle, error) {
+	return nil, nil
+}
+
+func (f *fakeCatalogRepo) GetPublishedNewsByID(_ context.Context, _ uuid.UUID) (domain.NewsArticle, error) {
+	return domain.NewsArticle{}, nil
+}
+
 // doGet — обёртка над http.NewRequestWithContext+Do: линтер (noctx) требует контекст
 // на каждом внешнем вызове, простой http.Get его не пробрасывает.
 func doGet(ctx context.Context, t *testing.T, url string) (*http.Response, error) {
@@ -58,7 +143,7 @@ func TestSmoke_CatalogRoutesThroughRealServer(t *testing.T) {
 		getInst: domain.Institution{ID: someID, Name: domain.Bilingual{RU: "Сад №1", TG: "Боғи №1"}, Region: "dushanbe", ModerationStatus: "approved"},
 	}
 
-	handler := newHandler(log, nil, nil, fakeRepo, nil)
+	handler := newHandler(log, nil, nil, fakeRepo, nil, nil, "", nil, nil, nil, nil, nil, nil, nil, nil)
 
 	cfg := config.Config{HTTPAddr: ":0", ShutdownTimeout: 2 * time.Second}
 	ctx, cancel := context.WithCancel(context.Background())

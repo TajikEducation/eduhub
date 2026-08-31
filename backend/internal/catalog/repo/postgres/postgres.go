@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/abdulhalim/eduhub/backend/internal/catalog/domain"
 	"github.com/abdulhalim/eduhub/backend/internal/platform/apperr"
@@ -24,6 +25,7 @@ import (
 type querier interface {
 	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
 }
 
 // InstitutionRepo — репозиторий каталога институций поверх PostgreSQL.

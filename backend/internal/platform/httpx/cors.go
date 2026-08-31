@@ -13,12 +13,15 @@ const (
 
 // CORS ограничивает cross-origin доступ allowedOrigins: preflight-запросы (OPTIONS с
 // Access-Control-Request-Method) обрабатывает сама, обычные запросы — проставляет заголовок
-// и передаёт дальше next.
+// и передаёт дальше next. allowedOrigins == ["*"] — разрешить любой origin (аутентификация тут
+// через Bearer JWT в заголовке, не cookie, так что Access-Control-Allow-Credentials не нужен и
+// буквальный "*" в ответе безопасен).
 func CORS(allowedOrigins []string) Middleware {
+	allowAll := slices.Contains(allowedOrigins, "*")
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			origin := r.Header.Get("Origin")
-			allowed := slices.Contains(allowedOrigins, origin)
+			allowed := allowAll || slices.Contains(allowedOrigins, origin)
 
 			if r.Method == http.MethodOptions && r.Header.Get("Access-Control-Request-Method") != "" {
 				if allowed {

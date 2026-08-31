@@ -1,0 +1,157 @@
+{
+  "info": {
+    "name": "EduHub API",
+    "description": "Локальная коллекция для EduHub backend (каталог учреждений). Base URL берётся из переменной окружения {{base_url}}.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "eduhub-backend-local"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:3001", "type": "string" },
+    { "key": "institution_id", "value": "a85d4d19-807c-456e-9487-c922d057d0d1", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET /healthz",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/healthz", "host": ["{{base_url}}"], "path": ["healthz"] }
+          }
+        },
+        {
+          "name": "GET /readyz",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/readyz", "host": ["{{base_url}}"], "path": ["readyz"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Catalog",
+      "item": [
+        {
+          "name": "List institutions (no filters)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/institutions",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "institutions"]
+            }
+          }
+        },
+        {
+          "name": "List institutions (full filter set)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/institutions?q=&type=kindergarten,school&region=Dushanbe&area=&curriculum=&program_level=&min_price=&max_price=&min_rating=&transport=&food=&verified=&discount=&sort=score&lat=&lng=&radius_km=&limit=20&cursor=",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "institutions"],
+              "query": [
+                { "key": "q", "value": "", "description": "Полнотекстовый поиск" },
+                { "key": "type", "value": "kindergarten,school", "description": "CSV: типы учреждений" },
+                { "key": "region", "value": "Dushanbe", "description": "Регион (Dushanbe/Sughd/Khatlon/GBAO/RRP)" },
+                { "key": "area", "value": "", "description": "Район/местность" },
+                { "key": "curriculum", "value": "", "description": "CSV" },
+                { "key": "program_level", "value": "", "description": "CSV" },
+                { "key": "min_price", "value": "", "description": "int" },
+                { "key": "max_price", "value": "", "description": "int" },
+                { "key": "min_rating", "value": "", "description": "float" },
+                { "key": "transport", "value": "", "description": "true/false" },
+                { "key": "food", "value": "", "description": "true/false" },
+                { "key": "verified", "value": "", "description": "true/false" },
+                { "key": "discount", "value": "", "description": "true/false" },
+                { "key": "sort", "value": "score", "description": "'' | price_asc | score" },
+                { "key": "lat", "value": "", "description": "[-90,90], требует lng" },
+                { "key": "lng", "value": "", "description": "[-180,180], требует lat" },
+                { "key": "radius_km", "value": "", "description": "float, требует lat+lng" },
+                { "key": "limit", "value": "20", "description": "неотрицательное целое" },
+                { "key": "cursor", "value": "", "description": "keyset-пагинация, из ответа предыдущей страницы" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List institutions (next page by cursor)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/institutions?limit=20&cursor={{next_cursor}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "institutions"],
+              "query": [
+                { "key": "limit", "value": "20" },
+                { "key": "cursor", "value": "{{next_cursor}}" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// next_cursor заполняется тестовым скриптом предыдущего запроса ('List institutions ...')"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search near point (geo)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/institutions?lat=38.5598&lng=68.7870&radius_km=5&sort=score",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "institutions"],
+              "query": [
+                { "key": "lat", "value": "38.5598" },
+                { "key": "lng", "value": "68.7870" },
+                { "key": "radius_km", "value": "5" },
+                { "key": "sort", "value": "score" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get institution by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/institutions/{{institution_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "institutions", "{{institution_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Get institution (invalid UUID -> 400)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/institutions/not-a-uuid",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "institutions", "not-a-uuid"]
+            }
+          }
+        },
+        {
+          "name": "Get institution (not found -> 404)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/institutions/00000000-0000-0000-0000-000000000000",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "institutions", "00000000-0000-0000-0000-000000000000"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

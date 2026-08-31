@@ -15,18 +15,19 @@ type Socials struct {
 
 // StaffMember — педагог/персонал учреждения (catalog.institution_staff).
 type StaffMember struct {
-	ID        uuid.UUID
-	Name      Bilingual
-	RoleType  string
-	RoleLabel Bilingual
-	Subject   *Bilingual
-	PhotoURL  *string
-	Exp       *string
-	Bio       *Bilingual
-	Education []Bilingual
-	Email     *string
-	Phone     *string
-	CreatedAt time.Time
+	ID            uuid.UUID
+	InstitutionID uuid.UUID
+	Name          Bilingual
+	RoleType      string
+	RoleLabel     Bilingual
+	Subject       *Bilingual
+	PhotoURL      *string
+	Exp           *string
+	Bio           *Bilingual
+	Education     []Bilingual
+	Email         *string
+	Phone         *string
+	CreatedAt     time.Time
 }
 
 // AchievementLink — ссылка в описании достижения ({label,url} в JSONB links).
@@ -93,17 +94,18 @@ type MealPlan struct {
 
 // NewsArticle — новость учреждения (catalog.news_articles).
 type NewsArticle struct {
-	ID         uuid.UUID
-	Title      Bilingual
-	Category   *Bilingual
-	CoverS3Key *string
-	VideoURL   *string
-	Content    Bilingual
-	Tags       []Bilingual
-	Status     string
-	ViewsCount int
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
+	ID            uuid.UUID
+	InstitutionID uuid.UUID
+	Title         Bilingual
+	Category      *Bilingual
+	CoverS3Key    *string
+	VideoURL      *string
+	Content       Bilingual
+	Tags          []Bilingual
+	Status        string
+	ViewsCount    int
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 // Institution — карточка учреждения, зеркалит catalog.institutions + вложенные коллекции-сателлиты.

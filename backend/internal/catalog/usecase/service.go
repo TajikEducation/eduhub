@@ -37,6 +37,23 @@ func (s *Service) List(ctx context.Context, f domain.Filter) (domain.ListResult,
 	return result, nil
 }
 
+// ListForModeration возвращает институции с указанным статусом модерации (все статусы, если
+// status==""), без форсирования approved — только для moderator/admin (см. rbac.RequireRole
+// в cmd/api/router.go). Limit не форсируется (Filter.Limit=0 — без LIMIT, см. пакетный
+// комментарий repo/postgres/postgres.go) — небольшой MVP-каталог, полная очередь на модерацию
+// не нуждается в пагинации.
+func (s *Service) ListForModeration(ctx context.Context, status string) ([]domain.Institution, error) {
+	f := domain.Filter{}
+	if status != "" {
+		f.Statuses = []string{status}
+	}
+	result, err := s.repo.List(ctx, f)
+	if err != nil {
+		return nil, fmt.Errorf("usecase: list institutions for moderation: %w", err)
+	}
+	return result.Items, nil
+}
+
 // Get возвращает институцию по id. Не approved (pending/rejected) — NotFound, не Forbidden:
 // публичный каталог не должен раскрывать сам факт существования немодерированной институции.
 func (s *Service) Get(ctx context.Context, id uuid.UUID) (domain.Institution, error) {
