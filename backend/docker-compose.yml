@@ -73,6 +73,29 @@ services:
       db:
         condition: service_healthy
 
+  # Разовый прогон демо-сида после миграций — см. cmd/devseed, Makefile seed для ручного
+  # запуска вне докера. Идемпотентен (upsert по seed_ref) — безопасно гонять на каждом старте.
+  seed:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    entrypoint: ["go", "run", "./cmd/devseed"]
+    environment:
+      APP_ENV: dev
+      DATABASE_URL: postgres://eduhub:eduhub@db:5432/eduhub?sslmode=disable
+      # cmd/devseed не обращается к Redis, но config.Load() общий с api и требует значение
+      # безусловно (см. .github/workflows/ci.yml, тот же фикс).
+      REDIS_ADDR: redis:6379
+    volumes:
+      - ./:/src
+      - go-mod-cache:/root/go/pkg/mod
+      - go-build-cache:/root/.cache/go-build
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
   # API-сервис с hot-reload (air) — только для локальной разработки. Прод-образ: Dockerfile.
   api:
     build:
@@ -100,6 +123,8 @@ services:
       redis:
         condition: service_healthy
       migrate:
+        condition: service_completed_successfully
+      seed:
         condition: service_completed_successfully
 
 volumes:

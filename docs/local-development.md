@@ -46,6 +46,9 @@ docker compose run --rm --entrypoint go migrate tool goose -dir migrations postg
 docker compose run --rm --entrypoint go migrate tool goose -dir migrations postgres "postgres://eduhub:eduhub@db:5432/eduhub?sslmode=disable" status
 ```
 
+### Демо-данные
+После миграций сервис `seed` автоматически прогоняет `cmd/devseed` (9 демо-институций из `web/lib/data.ts`) — тоже одноразовый контейнер, `api` ждёт его завершения. Проверить: `docker compose ps seed` → `Exited (0)`. Идемпотентен — безопасно перезапускать (`docker compose up` повторно, или вручную `docker compose run --rm seed`), дублей не будет.
+
 ### Остановка
 ```bash
 docker compose down          # остановить + удалить контейнеры, volumes (БД, node_modules-volume и т.д.) остаются
