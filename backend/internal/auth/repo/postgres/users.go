@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -106,4 +107,44 @@ func (r *UserRepo) scanUser(row pgx.Row, idField, idValue string) (domain.User, 
 		return domain.User{}, fmt.Errorf("postgres: find user: %w", err)
 	}
 	return u, nil
+}
+
+// UpdateConsent обновляет consent_at/consent_version — переподтверждение при смене политики
+// (POST /auth/consent), отдельно от начального consent при регистрации.
+func (r *UserRepo) UpdateConsent(ctx context.Context, userID uuid.UUID, consentVersion string, consentAt time.Time) error {
+	const q = `UPDATE auth.users SET consent_at = $2, consent_version = $3 WHERE id = $1`
+	if _, err := r.db.Exec(ctx, q, userID, consentAt, consentVersion); err != nil {
+		return fmt.Errorf("postgres: update consent: %w", err)
+	}
+	return nil
+}
+
+// MarkEmailVerified ставит email_verified_at и переводит status в 'active' — успешная
+// верификация email (POST /auth/verify) считается достаточной для активации аккаунта.
+func (r *UserRepo) MarkEmailVerified(ctx context.Context, userID uuid.UUID, verifiedAt time.Time) error {
+	const q = `UPDATE auth.users SET email_verified_at = $2, status = 'active' WHERE id = $1`
+	if _, err := r.db.Exec(ctx, q, userID, verifiedAt); err != nil {
+		return fmt.Errorf("postgres: mark email verified: %w", err)
+	}
+	return nil
+}
+
+// UpdatePasswordHash — новый пароль после password-reset.
+func (r *UserRepo) UpdatePasswordHash(ctx context.Context, userID uuid.UUID, passwordHash string) error {
+	const q = `UPDATE auth.users SET password_hash = $2 WHERE id = $1`
+	if _, err := r.db.Exec(ctx, q, userID, passwordHash); err != nil {
+		return fmt.Errorf("postgres: update password hash: %w", err)
+	}
+	return nil
+}
+
+// SoftDelete — право на удаление аккаунта (закон РТ №1537): НЕ физический DELETE, статус
+// 'deleted' + анонимизация PII-полей. anonymizedEmail — типично "deleted-<uuid>@eduhub.local",
+// формирует вызывающий usecase, не репозиторий (это не забота техники хранения).
+func (r *UserRepo) SoftDelete(ctx context.Context, userID uuid.UUID, anonymizedEmail string, deletedAt time.Time) error {
+	const q = `UPDATE auth.users SET status = 'deleted', deleted_at = $2, email = $3, phone = NULL, password_hash = NULL WHERE id = $1`
+	if _, err := r.db.Exec(ctx, q, userID, deletedAt, anonymizedEmail); err != nil {
+		return fmt.Errorf("postgres: soft delete user: %w", err)
+	}
+	return nil
 }

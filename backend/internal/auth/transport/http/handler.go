@@ -27,12 +27,22 @@ type accountService interface {
 	Login(ctx context.Context, email, password string) (access, refresh string, err error)
 	Me(ctx context.Context, userID uuid.UUID) (domain.User, error)
 	LoginWithGoogle(ctx context.Context, idToken, consentVersion string) (access, refresh string, err error)
+	UpdateConsent(ctx context.Context, userID uuid.UUID, consentVersion string) error
+	DeleteMe(ctx context.Context, userID uuid.UUID) error
 }
 
 // sessionService — то, что нужно транспорту от usecase-слоя сессий.
 type sessionService interface {
 	Rotate(ctx context.Context, refreshToken string) (access, refresh string, err error)
 	Logout(ctx context.Context, refreshToken string) error
+}
+
+// verificationService — то, что нужно транспорту от usecase-слоя верификации/password-reset.
+type verificationService interface {
+	RequestEmailVerification(ctx context.Context, email string) error
+	VerifyEmail(ctx context.Context, email, code string) error
+	RequestPasswordReset(ctx context.Context, email string) error
+	ConfirmPasswordReset(ctx context.Context, email, code, newPassword string) error
 }
 
 // RegisterHandler — POST /auth/register.
@@ -220,5 +230,144 @@ func MeHandler(svc accountService, logger *slog.Logger) http.HandlerFunc {
 			EmailVerifiedAt: u.EmailVerifiedAt,
 			CreatedAt:       u.CreatedAt,
 		})
+	}
+}
+
+// VerifyEmailHandler — POST /auth/verify.
+func VerifyEmailHandler(svc verificationService, logger *slog.Logger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req verifyEmailRequest
+		if err := httpx.DecodeJSON(w, r, &req); err != nil {
+			httpx.WriteError(w, r, logger, err)
+			return
+		}
+		fields := map[string]string{}
+		if req.Email == "" {
+			fields["email"] = "обязателен"
+		}
+		if req.Code == "" {
+			fields["code"] = "обязателен"
+		}
+		if len(fields) > 0 {
+			httpx.WriteError(w, r, logger, apperr.Invalid(fields, "некорректные данные"))
+			return
+		}
+		if err := svc.VerifyEmail(r.Context(), req.Email, req.Code); err != nil {
+			httpx.WriteError(w, r, logger, err)
+			return
+		}
+		_ = httpx.WriteJSON(w, logger, http.StatusOK, statusResponse{Status: "ok"})
+	}
+}
+
+// ResendVerificationHandler — POST /auth/verify/resend. Всегда 200 (anti-enumeration) —
+// см. комментарий VerificationService.RequestEmailVerification.
+func ResendVerificationHandler(svc verificationService, logger *slog.Logger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req resendVerificationRequest
+		if err := httpx.DecodeJSON(w, r, &req); err != nil {
+			httpx.WriteError(w, r, logger, err)
+			return
+		}
+		if req.Email == "" {
+			httpx.WriteError(w, r, logger, apperr.Invalid(map[string]string{"email": "обязателен"}, "некорректные данные"))
+			return
+		}
+		if err := svc.RequestEmailVerification(r.Context(), req.Email); err != nil {
+			httpx.WriteError(w, r, logger, err)
+			return
+		}
+		_ = httpx.WriteJSON(w, logger, http.StatusOK, statusResponse{Status: "ok"})
+	}
+}
+
+// PasswordResetRequestHandler — POST /auth/password/reset-request. Всегда 200 (anti-enumeration).
+func PasswordResetRequestHandler(svc verificationService, logger *slog.Logger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req passwordResetRequestRequest
+		if err := httpx.DecodeJSON(w, r, &req); err != nil {
+			httpx.WriteError(w, r, logger, err)
+			return
+		}
+		if req.Email == "" {
+			httpx.WriteError(w, r, logger, apperr.Invalid(map[string]string{"email": "обязателен"}, "некорректные данные"))
+			return
+		}
+		if err := svc.RequestPasswordReset(r.Context(), req.Email); err != nil {
+			httpx.WriteError(w, r, logger, err)
+			return
+		}
+		_ = httpx.WriteJSON(w, logger, http.StatusOK, statusResponse{Status: "ok"})
+	}
+}
+
+// PasswordResetConfirmHandler — POST /auth/password/reset-confirm.
+func PasswordResetConfirmHandler(svc verificationService, logger *slog.Logger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req passwordResetConfirmRequest
+		if err := httpx.DecodeJSON(w, r, &req); err != nil {
+			httpx.WriteError(w, r, logger, err)
+			return
+		}
+		fields := map[string]string{}
+		if req.Email == "" {
+			fields["email"] = "обязателен"
+		}
+		if req.Code == "" {
+			fields["code"] = "обязателен"
+		}
+		if len(req.NewPassword) < minPasswordLength {
+			fields["new_password"] = "минимум 8 символов"
+		}
+		if len(fields) > 0 {
+			httpx.WriteError(w, r, logger, apperr.Invalid(fields, "некорректные данные"))
+			return
+		}
+		if err := svc.ConfirmPasswordReset(r.Context(), req.Email, req.Code, req.NewPassword); err != nil {
+			httpx.WriteError(w, r, logger, err)
+			return
+		}
+		_ = httpx.WriteJSON(w, logger, http.StatusOK, statusResponse{Status: "ok"})
+	}
+}
+
+// ConsentHandler — POST /auth/consent, защищён RequireAuth.
+func ConsentHandler(svc accountService, logger *slog.Logger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		principal, ok := FromContext(r.Context())
+		if !ok {
+			httpx.WriteError(w, r, logger, apperr.Internal(errNoPrincipalInContext))
+			return
+		}
+		var req consentRequest
+		if err := httpx.DecodeJSON(w, r, &req); err != nil {
+			httpx.WriteError(w, r, logger, err)
+			return
+		}
+		if req.ConsentVersion == "" {
+			httpx.WriteError(w, r, logger, apperr.Invalid(map[string]string{"consent_version": "обязателен"}, "некорректные данные"))
+			return
+		}
+		if err := svc.UpdateConsent(r.Context(), principal.UserID, req.ConsentVersion); err != nil {
+			httpx.WriteError(w, r, logger, err)
+			return
+		}
+		_ = httpx.WriteJSON(w, logger, http.StatusOK, statusResponse{Status: "ok"})
+	}
+}
+
+// DeleteMeHandler — DELETE /auth/me, защищён RequireAuth.
+func DeleteMeHandler(svc accountService, logger *slog.Logger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		principal, ok := FromContext(r.Context())
+		if !ok {
+			httpx.WriteError(w, r, logger, apperr.Internal(errNoPrincipalInContext))
+			return
+		}
+		if err := svc.DeleteMe(r.Context(), principal.UserID); err != nil {
+			httpx.WriteError(w, r, logger, err)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
 	}
 }

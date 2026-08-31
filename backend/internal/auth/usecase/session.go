@@ -119,6 +119,12 @@ func (s *SessionService) Logout(ctx context.Context, presentedRefreshToken strin
 	return s.repo.Revoke(ctx, existing.ID, s.clock.Now(), nil)
 }
 
+// RevokeAllForUser отзывает все активные сессии пользователя — вызывается после password-reset
+// и при удалении аккаунта (безопасность: не оставлять валидными токены, выданные до события).
+func (s *SessionService) RevokeAllForUser(ctx context.Context, userID uuid.UUID) error {
+	return s.repo.RevokeAllForUser(ctx, userID, s.clock.Now())
+}
+
 func (s *SessionService) issueTokenPair(ctx context.Context, userID, familyID uuid.UUID, role string) (accessToken, refreshToken string, newID uuid.UUID, err error) {
 	plaintext, err := generateRefreshToken()
 	if err != nil {

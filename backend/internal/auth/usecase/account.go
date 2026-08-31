@@ -193,6 +193,23 @@ func (s *AccountService) LoginWithGoogle(ctx context.Context, idToken, consentVe
 	}
 }
 
+// UpdateConsent фиксирует переподтверждение согласия (например после обновления политики) —
+// отдельно от начального consent при регистрации.
+func (s *AccountService) UpdateConsent(ctx context.Context, userID uuid.UUID, consentVersion string) error {
+	return s.users.UpdateConsent(ctx, userID, consentVersion, s.clock.Now())
+}
+
+// DeleteMe — право на удаление аккаунта (закон РТ №1537): soft-delete + анонимизация + отзыв
+// ВСЕХ активных сессий. Email анонимизируется детерминированно по id — не оставляет исходный
+// email читаемым, но не требует отдельного хранилища "какой email был".
+func (s *AccountService) DeleteMe(ctx context.Context, userID uuid.UUID) error {
+	anonymizedEmail := fmt.Sprintf("deleted-%s@eduhub.local", userID.String())
+	if err := s.users.SoftDelete(ctx, userID, anonymizedEmail, s.clock.Now()); err != nil {
+		return fmt.Errorf("usecase: delete me: soft delete: %w", err)
+	}
+	return s.sessions.RevokeAllForUser(ctx, userID)
+}
+
 // normalizeEmail — lowercase+trim, единый канонический вид email для сравнения/хранения.
 func normalizeEmail(email string) string {
 	return strings.ToLower(strings.TrimSpace(email))

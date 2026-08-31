@@ -23,9 +23,10 @@ const refreshTTL = 30 * 24 * time.Hour
 type fakeRefreshTokenRepo struct {
 	byHash map[string]domain.RefreshToken
 
-	createCalls       []domain.RefreshToken
-	revokeCalls       []revokeCall
-	revokeFamilyCalls []uuid.UUID
+	createCalls           []domain.RefreshToken
+	revokeCalls           []revokeCall
+	revokeFamilyCalls     []uuid.UUID
+	revokeAllForUserCalls []uuid.UUID
 }
 
 type revokeCall struct {
@@ -69,6 +70,17 @@ func (f *fakeRefreshTokenRepo) RevokeFamily(_ context.Context, familyID uuid.UUI
 	f.revokeFamilyCalls = append(f.revokeFamilyCalls, familyID)
 	for hash, rt := range f.byHash {
 		if rt.FamilyID == familyID && rt.RevokedAt == nil {
+			rt.RevokedAt = &revokedAt
+			f.byHash[hash] = rt
+		}
+	}
+	return nil
+}
+
+func (f *fakeRefreshTokenRepo) RevokeAllForUser(_ context.Context, userID uuid.UUID, revokedAt time.Time) error {
+	f.revokeAllForUserCalls = append(f.revokeAllForUserCalls, userID)
+	for hash, rt := range f.byHash {
+		if rt.UserID == userID && rt.RevokedAt == nil {
 			rt.RevokedAt = &revokedAt
 			f.byHash[hash] = rt
 		}
@@ -323,5 +335,21 @@ func TestLogout_AlreadyRevokedToken_SilentSuccessWithoutRevoke(t *testing.T) {
 	}
 	if len(repo.revokeCalls) != 1 {
 		t.Errorf("Revoke() после повторного Logout() вызван %d раз, want 1 (не должен вызываться снова)", len(repo.revokeCalls))
+	}
+}
+
+func TestRevokeAllForUser_CallsRepoWithUserIDAndCurrentClock(t *testing.T) {
+	start := time.Date(2026, 8, 31, 12, 0, 0, 0, time.UTC)
+	clk := clock.NewFake(start)
+	repo := newFakeRefreshTokenRepo()
+	svc := newTestService(repo, clk)
+	userID := uuid.New()
+
+	if err := svc.RevokeAllForUser(context.Background(), userID); err != nil {
+		t.Fatalf("RevokeAllForUser() вернул ошибку: %v", err)
+	}
+
+	if len(repo.revokeAllForUserCalls) != 1 || repo.revokeAllForUserCalls[0] != userID {
+		t.Fatalf("repo.RevokeAllForUser() calls = %v, want [%v]", repo.revokeAllForUserCalls, userID)
 	}
 }

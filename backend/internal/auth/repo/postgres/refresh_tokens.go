@@ -86,3 +86,13 @@ func (r *RefreshTokenRepo) RevokeFamily(ctx context.Context, familyID uuid.UUID,
 	}
 	return nil
 }
+
+// RevokeAllForUser отзывает разом ВСЕ ещё не отозванные refresh-токены пользователя (все
+// семьи/устройства) — password-reset и удаление аккаунта.
+func (r *RefreshTokenRepo) RevokeAllForUser(ctx context.Context, userID uuid.UUID, revokedAt time.Time) error {
+	const q = `UPDATE auth.refresh_tokens SET revoked_at = $2 WHERE user_id = $1 AND revoked_at IS NULL`
+	if _, err := r.db.Exec(ctx, q, userID, revokedAt); err != nil {
+		return fmt.Errorf("postgres: revoke all refresh tokens for user: %w", err)
+	}
+	return nil
+}

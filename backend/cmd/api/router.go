@@ -62,6 +62,7 @@ func newHandler(
 	userRepo authUserRepo,
 	refreshTokenRepo authusecase.RefreshTokenRepo,
 	oauthRepo authusecase.OAuthIdentityRepo,
+	verificationCodeRepo authusecase.VerificationCodeRepo,
 	hasher *password.Hasher,
 	jwtSecret []byte,
 	clk clock.Clock,
@@ -80,6 +81,7 @@ func newHandler(
 	sessionSvc := authusecase.NewSessionService(refreshTokenRepo, userRepo, jwtIssuer, clk, refreshTokenTTL)
 	googleVerifier := googleoauth.NewVerifier(googleClientID)
 	accountSvc := authusecase.NewAccountService(userRepo, hasher, sessionSvc, clk, googleVerifier, oauthRepo)
+	verificationSvc := authusecase.NewVerificationService(userRepo, verificationCodeRepo, sessionSvc, hasher, clk, log)
 
 	router := httpx.NewRouter(log)
 	router.Handle("GET /healthz", httpx.Healthz(log))
@@ -96,6 +98,12 @@ func newHandler(
 	// матчит ни одну аудиторию) — ожидаемая деградация для окружений без настроенного Google
 	// OAuth, не баг.
 	router.Handle("POST /auth/oauth/google", authhttp.OAuthGoogleHandler(accountSvc, log))
+	router.Handle("POST /auth/verify", authhttp.VerifyEmailHandler(verificationSvc, log))
+	router.Handle("POST /auth/verify/resend", authhttp.ResendVerificationHandler(verificationSvc, log))
+	router.Handle("POST /auth/password/reset-request", authhttp.PasswordResetRequestHandler(verificationSvc, log))
+	router.Handle("POST /auth/password/reset-confirm", authhttp.PasswordResetConfirmHandler(verificationSvc, log))
+	router.Handle("POST /auth/consent", authhttp.RequireAuth(jwtIssuer, log)(authhttp.ConsentHandler(accountSvc, log)))
+	router.Handle("DELETE /auth/me", authhttp.RequireAuth(jwtIssuer, log)(authhttp.DeleteMeHandler(accountSvc, log)))
 
 	return httpx.Chain(httpx.WithRequestID, httpx.AccessLog(log), httpx.CORS(corsOrigins), httpx.Recover(log))(router)
 }

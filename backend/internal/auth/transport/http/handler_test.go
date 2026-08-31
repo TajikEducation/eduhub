@@ -45,6 +45,9 @@ type fakeAccountService struct {
 	googleAccess  string
 	googleRefresh string
 	googleErr     error
+
+	updateConsentErr error
+	deleteMeErr      error
 }
 
 func (f *fakeAccountService) Register(_ context.Context, _, _, _ string) (domain.User, error) {
@@ -63,6 +66,14 @@ func (f *fakeAccountService) LoginWithGoogle(_ context.Context, _, _ string) (st
 	return f.googleAccess, f.googleRefresh, f.googleErr
 }
 
+func (f *fakeAccountService) UpdateConsent(_ context.Context, _ uuid.UUID, _ string) error {
+	return f.updateConsentErr
+}
+
+func (f *fakeAccountService) DeleteMe(_ context.Context, _ uuid.UUID) error {
+	return f.deleteMeErr
+}
+
 // fakeSessionService — тестовый двойник sessionService.
 type fakeSessionService struct {
 	rotateAccess  string
@@ -78,6 +89,30 @@ func (f *fakeSessionService) Rotate(_ context.Context, _ string) (string, string
 
 func (f *fakeSessionService) Logout(_ context.Context, _ string) error {
 	return f.logoutErr
+}
+
+// fakeVerificationService — тестовый двойник verificationService.
+type fakeVerificationService struct {
+	requestEmailVerificationErr error
+	verifyEmailErr              error
+	requestPasswordResetErr     error
+	confirmPasswordResetErr     error
+}
+
+func (f *fakeVerificationService) RequestEmailVerification(_ context.Context, _ string) error {
+	return f.requestEmailVerificationErr
+}
+
+func (f *fakeVerificationService) VerifyEmail(_ context.Context, _, _ string) error {
+	return f.verifyEmailErr
+}
+
+func (f *fakeVerificationService) RequestPasswordReset(_ context.Context, _ string) error {
+	return f.requestPasswordResetErr
+}
+
+func (f *fakeVerificationService) ConfirmPasswordReset(_ context.Context, _, _, _ string) error {
+	return f.confirmPasswordResetErr
 }
 
 func TestRegisterHandler(t *testing.T) {

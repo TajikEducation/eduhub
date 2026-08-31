@@ -20,6 +20,10 @@ type RefreshTokenRepo interface {
 	Revoke(ctx context.Context, id uuid.UUID, revokedAt time.Time, replacedBy *uuid.UUID) error
 	// RevokeFamily отзывает разом все ещё не отозванные токены семьи — reuse-detection.
 	RevokeFamily(ctx context.Context, familyID uuid.UUID, revokedAt time.Time) error
+	// RevokeAllForUser отзывает разом ВСЕ ещё не отозванные refresh-токены пользователя (все
+	// семьи/устройства) — нужен для password-reset и удаления аккаунта: смена пароля/удаление
+	// аккаунта должны выкидывать из всех активных сессий, не только текущей.
+	RevokeAllForUser(ctx context.Context, userID uuid.UUID, revokedAt time.Time) error
 }
 
 // UserRoleLookup — порт чтения текущей роли пользователя. Нужен Rotate(): роль в новом
@@ -39,6 +43,25 @@ type UserRepo interface {
 	FindByEmail(ctx context.Context, email string) (domain.User, error)
 	// FindByID — apperr.NotFound, если не найден.
 	FindByID(ctx context.Context, id uuid.UUID) (domain.User, error)
+	// UpdateConsent обновляет consent_at/consent_version — переподтверждение согласия.
+	UpdateConsent(ctx context.Context, userID uuid.UUID, consentVersion string, consentAt time.Time) error
+	// MarkEmailVerified ставит email_verified_at и переводит status в 'active'.
+	MarkEmailVerified(ctx context.Context, userID uuid.UUID, verifiedAt time.Time) error
+	// UpdatePasswordHash — новый пароль после password-reset.
+	UpdatePasswordHash(ctx context.Context, userID uuid.UUID, passwordHash string) error
+	// SoftDelete — soft-delete + анонимизация PII (закон РТ №1537), не физический DELETE.
+	SoftDelete(ctx context.Context, userID uuid.UUID, anonymizedEmail string, deletedAt time.Time) error
+}
+
+// VerificationCodeRepo — порт в БД для кодов подтверждения (email-верификация, password-reset,
+// E2.4). Реализация — internal/auth/repo/postgres.
+type VerificationCodeRepo interface {
+	Create(ctx context.Context, vc domain.VerificationCode) error
+	// FindLatestActive — самый свежий ещё не истёкший код для (userID, channel, purpose).
+	// apperr.NotFound, если такого нет.
+	FindLatestActive(ctx context.Context, userID uuid.UUID, channel, purpose string, now time.Time) (domain.VerificationCode, error)
+	IncrementAttempts(ctx context.Context, id uuid.UUID) error
+	Delete(ctx context.Context, id uuid.UUID) error
 }
 
 // GoogleIDTokenVerifier — порт верификации Google ID-токена. Реализация — internal/auth/googleoauth.

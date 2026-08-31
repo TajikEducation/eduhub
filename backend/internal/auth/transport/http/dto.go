@@ -60,3 +60,30 @@ type meResponse struct {
 	EmailVerifiedAt *time.Time `json:"email_verified_at,omitempty"`
 	CreatedAt       time.Time  `json:"created_at"`
 }
+
+type verifyEmailRequest struct {
+	Email string `json:"email"`
+	Code  string `json:"code"`
+}
+
+type resendVerificationRequest struct {
+	Email string `json:"email"`
+}
+
+type passwordResetRequestRequest struct {
+	Email string `json:"email"`
+}
+
+type passwordResetConfirmRequest struct {
+	Email       string `json:"email"`
+	Code        string `json:"code"`
+	NewPassword string `json:"new_password"`
+}
+
+type consentRequest struct {
+	ConsentVersion string `json:"consent_version"`
+}
+
+type statusResponse struct {
+	Status string `json:"status"`
+}

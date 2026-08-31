@@ -39,6 +39,22 @@ func (fakeAuthUserRepo) RoleByUserID(context.Context, uuid.UUID) (string, error)
 	return "", apperr.NotFound("user", "irrelevant")
 }
 
+func (fakeAuthUserRepo) UpdateConsent(context.Context, uuid.UUID, string, time.Time) error {
+	return apperr.Internal(nil)
+}
+
+func (fakeAuthUserRepo) MarkEmailVerified(context.Context, uuid.UUID, time.Time) error {
+	return apperr.Internal(nil)
+}
+
+func (fakeAuthUserRepo) UpdatePasswordHash(context.Context, uuid.UUID, string) error {
+	return apperr.Internal(nil)
+}
+
+func (fakeAuthUserRepo) SoftDelete(context.Context, uuid.UUID, string, time.Time) error {
+	return apperr.Internal(nil)
+}
+
 // fakeRefreshTokenRepo — минимальный дублёр authusecase.RefreshTokenRepo для этого же smoke-теста.
 type fakeRefreshTokenRepo struct{}
 
@@ -58,6 +74,10 @@ func (fakeRefreshTokenRepo) RevokeFamily(context.Context, uuid.UUID, time.Time) 
 	return nil
 }
 
+func (fakeRefreshTokenRepo) RevokeAllForUser(context.Context, uuid.UUID, time.Time) error {
+	return nil
+}
+
 // fakeOAuthIdentityRepo — минимальный дублёр authusecase.OAuthIdentityRepo для этого же smoke-теста.
 type fakeOAuthIdentityRepo struct{}
 
@@ -69,14 +89,22 @@ func (fakeOAuthIdentityRepo) Create(context.Context, authdomain.OAuthIdentity) e
 	return apperr.Internal(nil)
 }
 
-// fakeOAuthRepo — минимальный дублёр authusecase.OAuthIdentityRepo для этого же smoke-теста.
-type fakeOAuthRepo struct{}
+// fakeVerificationCodeRepo — минимальный дублёр authusecase.VerificationCodeRepo для этого же smoke-теста.
+type fakeVerificationCodeRepo struct{}
 
-func (fakeOAuthRepo) FindByProvider(context.Context, string, string) (authdomain.OAuthIdentity, error) {
-	return authdomain.OAuthIdentity{}, apperr.NotFound("oauth_identity", "irrelevant")
+func (fakeVerificationCodeRepo) Create(context.Context, authdomain.VerificationCode) error {
+	return apperr.Internal(nil)
 }
 
-func (fakeOAuthRepo) Create(context.Context, authdomain.OAuthIdentity) error {
+func (fakeVerificationCodeRepo) FindLatestActive(context.Context, uuid.UUID, string, string, time.Time) (authdomain.VerificationCode, error) {
+	return authdomain.VerificationCode{}, apperr.NotFound("verification_code", "irrelevant")
+}
+
+func (fakeVerificationCodeRepo) IncrementAttempts(context.Context, uuid.UUID) error {
+	return apperr.Internal(nil)
+}
+
+func (fakeVerificationCodeRepo) Delete(context.Context, uuid.UUID) error {
 	return apperr.Internal(nil)
 }
 
@@ -124,7 +152,7 @@ func TestSmoke_CatalogRoutesThroughRealServer(t *testing.T) {
 	}
 
 	hasher := password.New(password.DefaultParams)
-	handler := newHandler(log, nil, nil, fakeRepo, nil, fakeAuthUserRepo{}, fakeRefreshTokenRepo{}, fakeOAuthIdentityRepo{}, hasher, []byte("test-secret"), clock.New(), "")
+	handler := newHandler(log, nil, nil, fakeRepo, nil, fakeAuthUserRepo{}, fakeRefreshTokenRepo{}, fakeOAuthIdentityRepo{}, fakeVerificationCodeRepo{}, hasher, []byte("test-secret"), clock.New(), "")
 
 	cfg := config.Config{HTTPAddr: ":0", ShutdownTimeout: 2 * time.Second}
 	ctx, cancel := context.WithCancel(context.Background())

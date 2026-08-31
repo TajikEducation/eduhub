@@ -253,3 +253,65 @@ func mustFind(ctx context.Context, t *testing.T, repo *postgres.RefreshTokenRepo
 	}
 	return rt
 }
+
+func TestRefreshTokenRepo_RevokeAllForUser_OnlyRevokesOwnTokensAndSkipsAlreadyRevoked(t *testing.T) {
+	url := testDatabaseURL(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	pool, err := pg.Open(ctx, url)
+	if err != nil {
+		t.Fatalf("pg.Open() вернул ошибку: %v", err)
+	}
+	defer pool.Close()
+
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatalf("pool.Begin() вернул ошибку: %v", err)
+	}
+	defer tx.Rollback(ctx)
+
+	userA := insertTestUser(ctx, t, tx, "revoke-all-a@example.test")
+	userB := insertTestUser(ctx, t, tx, "revoke-all-b@example.test")
+	repo := postgres.NewRefreshTokenRepo(tx)
+
+	mustCreateFor := func(userID uuid.UUID, hash string) {
+		rt := domain.RefreshToken{
+			ID: uuid.New(), UserID: userID, TokenHash: hash, FamilyID: uuid.New(),
+			ExpiresAt: time.Now().Add(time.Hour), CreatedAt: time.Now(),
+		}
+		if err := repo.Create(ctx, rt); err != nil {
+			t.Fatalf("Create(%s) вернул ошибку: %v", hash, err)
+		}
+	}
+
+	mustCreateFor(userA, "revoke-all-a-1")
+	mustCreateFor(userA, "revoke-all-a-2")
+	mustCreateFor(userB, "revoke-all-b-1")
+
+	// a-1 уже отозван РАНЬШЕ — своя исходная метка не должна перезаписаться.
+	earlierRevoke := time.Now().Add(-time.Hour).Truncate(time.Microsecond)
+	if err := repo.Revoke(ctx, mustFind(ctx, t, repo, "revoke-all-a-1").ID, earlierRevoke, nil); err != nil {
+		t.Fatalf("Revoke(a-1) вернул ошибку: %v", err)
+	}
+
+	revokeAt := time.Now().Truncate(time.Microsecond)
+	if err := repo.RevokeAllForUser(ctx, userA, revokeAt); err != nil {
+		t.Fatalf("RevokeAllForUser() вернул ошибку: %v", err)
+	}
+
+	a1 := mustFind(ctx, t, repo, "revoke-all-a-1")
+	if a1.RevokedAt == nil || !a1.RevokedAt.Equal(earlierRevoke) {
+		t.Errorf("a-1.RevokedAt = %v, want исходный %v (не должен перезаписываться)", a1.RevokedAt, earlierRevoke)
+	}
+
+	a2 := mustFind(ctx, t, repo, "revoke-all-a-2")
+	if a2.RevokedAt == nil || !a2.RevokedAt.Equal(revokeAt) {
+		t.Errorf("a-2.RevokedAt = %v, want %v", a2.RevokedAt, revokeAt)
+	}
+
+	b1 := mustFind(ctx, t, repo, "revoke-all-b-1")
+	if b1.RevokedAt != nil {
+		t.Errorf("b-1.RevokedAt = %v, want nil (другой пользователь, не должен быть затронут)", b1.RevokedAt)
+	}
+}

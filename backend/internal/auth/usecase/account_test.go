@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/abdulhalim/eduhub/backend/internal/auth/domain"
+	"github.com/abdulhalim/eduhub/backend/internal/auth/jwt"
 	"github.com/abdulhalim/eduhub/backend/internal/auth/password"
 	"github.com/abdulhalim/eduhub/backend/internal/auth/usecase"
 	"github.com/abdulhalim/eduhub/backend/internal/platform/apperr"
@@ -63,6 +64,57 @@ func (f *fakeUserRepo) put(u domain.User) domain.User {
 	f.byEmail[u.Email] = u
 	f.byID[u.ID] = u
 	return u
+}
+
+func (f *fakeUserRepo) UpdateConsent(_ context.Context, userID uuid.UUID, consentVersion string, consentAt time.Time) error {
+	u, ok := f.byID[userID]
+	if !ok {
+		return apperr.NotFound("user", userID.String())
+	}
+	u.ConsentVersion = consentVersion
+	u.ConsentAt = consentAt
+	f.byID[userID] = u
+	f.byEmail[u.Email] = u
+	return nil
+}
+
+func (f *fakeUserRepo) MarkEmailVerified(_ context.Context, userID uuid.UUID, verifiedAt time.Time) error {
+	u, ok := f.byID[userID]
+	if !ok {
+		return apperr.NotFound("user", userID.String())
+	}
+	u.EmailVerifiedAt = &verifiedAt
+	u.Status = "active"
+	f.byID[userID] = u
+	f.byEmail[u.Email] = u
+	return nil
+}
+
+func (f *fakeUserRepo) UpdatePasswordHash(_ context.Context, userID uuid.UUID, passwordHash string) error {
+	u, ok := f.byID[userID]
+	if !ok {
+		return apperr.NotFound("user", userID.String())
+	}
+	u.PasswordHash = &passwordHash
+	f.byID[userID] = u
+	f.byEmail[u.Email] = u
+	return nil
+}
+
+func (f *fakeUserRepo) SoftDelete(_ context.Context, userID uuid.UUID, anonymizedEmail string, deletedAt time.Time) error {
+	u, ok := f.byID[userID]
+	if !ok {
+		return apperr.NotFound("user", userID.String())
+	}
+	delete(f.byEmail, u.Email)
+	u.Status = "deleted"
+	u.DeletedAt = &deletedAt
+	u.Email = anonymizedEmail
+	u.Phone = nil
+	u.PasswordHash = nil
+	f.byID[userID] = u
+	f.byEmail[u.Email] = u
+	return nil
 }
 
 // newTestAccountService собирает AccountService с фейковыми зависимостями поверх общих
@@ -239,5 +291,66 @@ func TestLogin_Success_ReturnsNonEmptyTokens(t *testing.T) {
 	}
 	if refresh == "" {
 		t.Error("refresh-токен пуст")
+	}
+}
+
+// newTestAccountServiceWithSessions — тот же набор фейков, что newTestAccountService, но также
+// возвращает fakeRefreshTokenRepo — нужен тестам DeleteMe, чтобы проверить, что все сессии
+// пользователя реально отозваны.
+func newTestAccountServiceWithSessions(users *fakeUserRepo, clk *clock.Fake) (*usecase.AccountService, *fakeRefreshTokenRepo) {
+	sessionRepo := newFakeRefreshTokenRepo()
+	issuer := jwt.NewIssuer([]byte("test-secret"), 15*time.Minute, clk)
+	sessions := usecase.NewSessionService(sessionRepo, fakeUserRoleLookup{role: "user"}, issuer, clk, refreshTTL)
+	hasher := password.New(password.Params{MemoryKiB: 8 * 1024, Iterations: 1, Parallelism: 1, SaltLength: 16, KeyLength: 32})
+	svc := usecase.NewAccountService(users, hasher, sessions, clk, &fakeGoogleVerifier{}, newFakeOAuthRepo())
+	return svc, sessionRepo
+}
+
+func TestUpdateConsent_UpdatesVersionAndTimestamp(t *testing.T) {
+	start := time.Date(2026, 8, 31, 12, 0, 0, 0, time.UTC)
+	clk := clock.NewFake(start)
+	users := newFakeUserRepo()
+	u := users.put(domain.User{Email: "consent@example.com", Role: "user", Status: "active", ConsentVersion: "v1"})
+	svc := newTestAccountService(users, clk)
+
+	if err := svc.UpdateConsent(context.Background(), u.ID, "v2"); err != nil {
+		t.Fatalf("UpdateConsent() вернул ошибку: %v", err)
+	}
+
+	updated, err := users.FindByID(context.Background(), u.ID)
+	if err != nil {
+		t.Fatalf("FindByID() вернул ошибку: %v", err)
+	}
+	if updated.ConsentVersion != "v2" {
+		t.Errorf("ConsentVersion = %q, want %q", updated.ConsentVersion, "v2")
+	}
+	if !updated.ConsentAt.Equal(start) {
+		t.Errorf("ConsentAt = %v, want %v", updated.ConsentAt, start)
+	}
+}
+
+func TestDeleteMe_SoftDeletesAnonymizesAndRevokesAllSessions(t *testing.T) {
+	clk := clock.NewFake(time.Now())
+	users := newFakeUserRepo()
+	u := users.put(domain.User{Email: "delete-me@example.com", Role: "user", Status: "active"})
+	svc, sessionRepo := newTestAccountServiceWithSessions(users, clk)
+
+	if err := svc.DeleteMe(context.Background(), u.ID); err != nil {
+		t.Fatalf("DeleteMe() вернул ошибку: %v", err)
+	}
+
+	updated, err := users.FindByID(context.Background(), u.ID)
+	if err != nil {
+		t.Fatalf("FindByID() вернул ошибку: %v", err)
+	}
+	if updated.Status != "deleted" {
+		t.Errorf("Status = %q, want %q", updated.Status, "deleted")
+	}
+	wantEmail := "deleted-" + u.ID.String() + "@eduhub.local"
+	if updated.Email != wantEmail {
+		t.Errorf("Email = %q, want %q", updated.Email, wantEmail)
+	}
+	if len(sessionRepo.revokeAllForUserCalls) != 1 || sessionRepo.revokeAllForUserCalls[0] != u.ID {
+		t.Errorf("revokeAllForUserCalls = %v, want [%v]", sessionRepo.revokeAllForUserCalls, u.ID)
 	}
 }
