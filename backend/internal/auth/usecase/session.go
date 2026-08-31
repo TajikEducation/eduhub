@@ -98,6 +98,27 @@ func (s *SessionService) Rotate(ctx context.Context, presentedRefreshToken strin
 	return accessToken, refreshToken, nil
 }
 
+// Logout отзывает один refresh-токен (обычный выход, не reuse-detection). Идемпотентен:
+// неизвестный/уже отозванный токен — не ошибка, тихий успех (не даём атакующему через код
+// ответа отличить «токен существовал» от «не существовал»).
+func (s *SessionService) Logout(ctx context.Context, presentedRefreshToken string) error {
+	hash := hashRefreshToken(presentedRefreshToken)
+
+	existing, err := s.repo.FindByHash(ctx, hash)
+	if err != nil {
+		if errors.Is(err, apperr.ErrNotFound) {
+			return nil
+		}
+		return fmt.Errorf("usecase: logout: find refresh token: %w", err)
+	}
+
+	if existing.RevokedAt != nil {
+		return nil
+	}
+
+	return s.repo.Revoke(ctx, existing.ID, s.clock.Now(), nil)
+}
+
 func (s *SessionService) issueTokenPair(ctx context.Context, userID, familyID uuid.UUID, role string) (accessToken, refreshToken string, newID uuid.UUID, err error) {
 	plaintext, err := generateRefreshToken()
 	if err != nil {

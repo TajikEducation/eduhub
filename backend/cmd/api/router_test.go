@@ -10,10 +10,53 @@ import (
 
 	"github.com/google/uuid"
 
+	authdomain "github.com/abdulhalim/eduhub/backend/internal/auth/domain"
+	"github.com/abdulhalim/eduhub/backend/internal/auth/password"
 	"github.com/abdulhalim/eduhub/backend/internal/catalog/domain"
+	"github.com/abdulhalim/eduhub/backend/internal/platform/apperr"
+	"github.com/abdulhalim/eduhub/backend/internal/platform/clock"
 	"github.com/abdulhalim/eduhub/backend/internal/platform/config"
 	"github.com/abdulhalim/eduhub/backend/internal/platform/logger"
 )
+
+// fakeAuthUserRepo — минимальный дублёр authUserRepo для сквозного smoke-теста каталога:
+// auth-роуты этим тестом не проверяются, репозиторий нужен только чтобы newHandler собрался.
+type fakeAuthUserRepo struct{}
+
+func (fakeAuthUserRepo) Create(context.Context, authdomain.User) (authdomain.User, error) {
+	return authdomain.User{}, apperr.Internal(nil)
+}
+
+func (fakeAuthUserRepo) FindByEmail(context.Context, string) (authdomain.User, error) {
+	return authdomain.User{}, apperr.NotFound("user", "irrelevant")
+}
+
+func (fakeAuthUserRepo) FindByID(context.Context, uuid.UUID) (authdomain.User, error) {
+	return authdomain.User{}, apperr.NotFound("user", "irrelevant")
+}
+
+func (fakeAuthUserRepo) RoleByUserID(context.Context, uuid.UUID) (string, error) {
+	return "", apperr.NotFound("user", "irrelevant")
+}
+
+// fakeRefreshTokenRepo — минимальный дублёр authusecase.RefreshTokenRepo для этого же smoke-теста.
+type fakeRefreshTokenRepo struct{}
+
+func (fakeRefreshTokenRepo) Create(context.Context, authdomain.RefreshToken) error {
+	return apperr.Internal(nil)
+}
+
+func (fakeRefreshTokenRepo) FindByHash(context.Context, string) (authdomain.RefreshToken, error) {
+	return authdomain.RefreshToken{}, apperr.NotFound("refresh_token", "irrelevant")
+}
+
+func (fakeRefreshTokenRepo) Revoke(context.Context, uuid.UUID, time.Time, *uuid.UUID) error {
+	return nil
+}
+
+func (fakeRefreshTokenRepo) RevokeFamily(context.Context, uuid.UUID, time.Time) error {
+	return nil
+}
 
 // fakeCatalogRepo — дублёр InstitutionRepo для сквозного smoke-теста: не трогает реальную БД,
 // просто отдаёт заранее подготовленные значения.
@@ -58,7 +101,8 @@ func TestSmoke_CatalogRoutesThroughRealServer(t *testing.T) {
 		getInst: domain.Institution{ID: someID, Name: domain.Bilingual{RU: "Сад №1", TG: "Боғи №1"}, Region: "dushanbe", ModerationStatus: "approved"},
 	}
 
-	handler := newHandler(log, nil, nil, fakeRepo, nil)
+	hasher := password.New(password.DefaultParams)
+	handler := newHandler(log, nil, nil, fakeRepo, nil, fakeAuthUserRepo{}, fakeRefreshTokenRepo{}, hasher, []byte("test-secret"), clock.New())
 
 	cfg := config.Config{HTTPAddr: ":0", ShutdownTimeout: 2 * time.Second}
 	ctx, cancel := context.WithCancel(context.Background())

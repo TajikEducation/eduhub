@@ -258,3 +258,70 @@ func TestRotate_ReusedToken_RevokesEntireFamily(t *testing.T) {
 		t.Error("refresh2 (та же семья) не отозван после reuse-detection — вся семья должна быть недействительна")
 	}
 }
+
+func TestLogout_ValidToken_RevokesWithoutReplacement(t *testing.T) {
+	start := time.Date(2026, 8, 31, 12, 0, 0, 0, time.UTC)
+	clk := clock.NewFake(start)
+	repo := newFakeRefreshTokenRepo()
+	svc := newTestService(repo, clk)
+
+	_, refresh, err := svc.Issue(context.Background(), uuid.New(), "user")
+	if err != nil {
+		t.Fatalf("Issue() вернул ошибку: %v", err)
+	}
+	issuedID := repo.createCalls[0].ID
+
+	if err := svc.Logout(context.Background(), refresh); err != nil {
+		t.Fatalf("Logout() вернул ошибку: %v", err)
+	}
+
+	if len(repo.revokeCalls) != 1 {
+		t.Fatalf("Revoke() вызван %d раз, want 1", len(repo.revokeCalls))
+	}
+	revoked := repo.revokeCalls[0]
+	if revoked.id != issuedID {
+		t.Errorf("Revoke() id = %v, want %v", revoked.id, issuedID)
+	}
+	if revoked.replacedBy != nil {
+		t.Errorf("Revoke() replacedBy = %v, want nil (logout — не ротация)", revoked.replacedBy)
+	}
+}
+
+func TestLogout_UnknownToken_SilentSuccessWithoutRevoke(t *testing.T) {
+	clk := clock.NewFake(time.Now())
+	repo := newFakeRefreshTokenRepo()
+	svc := newTestService(repo, clk)
+
+	if err := svc.Logout(context.Background(), "неизвестный-токен"); err != nil {
+		t.Fatalf("Logout() вернул ошибку: %v, want nil", err)
+	}
+	if len(repo.revokeCalls) != 0 {
+		t.Errorf("Revoke() вызван %d раз, want 0", len(repo.revokeCalls))
+	}
+}
+
+func TestLogout_AlreadyRevokedToken_SilentSuccessWithoutRevoke(t *testing.T) {
+	start := time.Date(2026, 8, 31, 12, 0, 0, 0, time.UTC)
+	clk := clock.NewFake(start)
+	repo := newFakeRefreshTokenRepo()
+	svc := newTestService(repo, clk)
+
+	_, refresh, err := svc.Issue(context.Background(), uuid.New(), "user")
+	if err != nil {
+		t.Fatalf("Issue() вернул ошибку: %v", err)
+	}
+
+	if err := svc.Logout(context.Background(), refresh); err != nil {
+		t.Fatalf("первый Logout() вернул ошибку: %v", err)
+	}
+	if len(repo.revokeCalls) != 1 {
+		t.Fatalf("Revoke() после первого Logout() вызван %d раз, want 1", len(repo.revokeCalls))
+	}
+
+	if err := svc.Logout(context.Background(), refresh); err != nil {
+		t.Fatalf("повторный Logout() вернул ошибку: %v, want nil", err)
+	}
+	if len(repo.revokeCalls) != 1 {
+		t.Errorf("Revoke() после повторного Logout() вызван %d раз, want 1 (не должен вызываться снова)", len(repo.revokeCalls))
+	}
+}

@@ -158,6 +158,39 @@ func TestWriteError_Conflict(t *testing.T) {
 	}
 }
 
+// TestWriteError_ConflictCode проверяет, что apperr.ConflictCode переопределяет code в теле
+// ответа, оставляя статус 409.
+func TestWriteError_ConflictCode(t *testing.T) {
+	rec, _ := callWriteError(t, apperr.ConflictCode("email_taken", "email уже занят"))
+
+	if rec.Code != http.StatusConflict {
+		t.Errorf("status = %d, want %d", rec.Code, http.StatusConflict)
+	}
+
+	body := decodeErrorBody(t, rec)
+	if body.Error.Code != "email_taken" {
+		t.Errorf("code = %q, want %q", body.Error.Code, "email_taken")
+	}
+	if body.Error.Message != "email уже занят" {
+		t.Errorf("message = %q, want %q", body.Error.Message, "email уже занят")
+	}
+}
+
+// TestWriteError_UnauthorizedCode проверяет, что apperr.UnauthorizedCode переопределяет code
+// в теле ответа, оставляя статус 401.
+func TestWriteError_UnauthorizedCode(t *testing.T) {
+	rec, _ := callWriteError(t, apperr.UnauthorizedCode("google_account_no_password", "войдите через Google"))
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("status = %d, want %d", rec.Code, http.StatusUnauthorized)
+	}
+
+	body := decodeErrorBody(t, rec)
+	if body.Error.Code != "google_account_no_password" {
+		t.Errorf("code = %q, want %q", body.Error.Code, "google_account_no_password")
+	}
+}
+
 // TestWriteError_RateLimited проверяет маппинг apperr.RateLimited →
 // 429/rate_limited с заголовком Retry-After: 60.
 func TestWriteError_RateLimited(t *testing.T) {

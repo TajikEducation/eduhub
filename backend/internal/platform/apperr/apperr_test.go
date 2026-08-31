@@ -142,6 +142,41 @@ func TestMessage_ReturnsMessageWithoutCategoryPrefix(t *testing.T) {
 	}
 }
 
+// TestConflictCode_MatchesSentinelAndCarriesCode — RED-кейс: ConflictCode матчится через
+// errors.Is(err, apperr.ErrConflict), а переопределённый code достаётся через errors.As.
+func TestConflictCode_MatchesSentinelAndCarriesCode(t *testing.T) {
+	err := apperr.ConflictCode("email_taken", "email уже зарегистрирован")
+
+	if !errors.Is(err, apperr.ErrConflict) {
+		t.Fatalf("errors.Is(err, apperr.ErrConflict) = false, want true; err=%v", err)
+	}
+
+	var target *apperr.Error
+	if !errors.As(err, &target) {
+		t.Fatalf("errors.As(err, &target) = false, want true; err=%v", err)
+	}
+	if got := target.Code(); got != "email_taken" {
+		t.Errorf("Code() = %q, want %q", got, "email_taken")
+	}
+}
+
+// TestUnauthorizedCode_MatchesSentinelAndCarriesCode — аналогично для UnauthorizedCode.
+func TestUnauthorizedCode_MatchesSentinelAndCarriesCode(t *testing.T) {
+	err := apperr.UnauthorizedCode("google_account_no_password", "аккаунт зарегистрирован через Google")
+
+	if !errors.Is(err, apperr.ErrUnauthorized) {
+		t.Fatalf("errors.Is(err, apperr.ErrUnauthorized) = false, want true; err=%v", err)
+	}
+
+	var target *apperr.Error
+	if !errors.As(err, &target) {
+		t.Fatalf("errors.As(err, &target) = false, want true; err=%v", err)
+	}
+	if got := target.Code(); got != "google_account_no_password" {
+		t.Errorf("Code() = %q, want %q", got, "google_account_no_password")
+	}
+}
+
 // TestMessage_FallsBackToCategoryWhenEmpty — RED-кейс: если message
 // пустой (например, Unauthorized("") — вызывающий не указал деталей),
 // Message() возвращает текст категории, а не пустую строку.

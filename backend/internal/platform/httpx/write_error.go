@@ -73,17 +73,17 @@ func WriteError(w http.ResponseWriter, r *http.Request, logger *slog.Logger, err
 func classify(err error) (status int, code string, message string, fields map[string]string, retryAfterSeconds int) {
 	switch {
 	case errors.Is(err, apperr.ErrNotFound):
-		return http.StatusNotFound, "not_found", errMessage(err), nil, 0
+		return http.StatusNotFound, errCode(err, "not_found"), errMessage(err), nil, 0
 	case errors.Is(err, apperr.ErrInvalid):
-		return http.StatusBadRequest, "invalid_input", errMessage(err), errFields(err), 0
+		return http.StatusBadRequest, errCode(err, "invalid_input"), errMessage(err), errFields(err), 0
 	case errors.Is(err, apperr.ErrUnauthorized):
-		return http.StatusUnauthorized, "unauthorized", errMessage(err), nil, 0
+		return http.StatusUnauthorized, errCode(err, "unauthorized"), errMessage(err), nil, 0
 	case errors.Is(err, apperr.ErrForbidden):
-		return http.StatusForbidden, "forbidden", errMessage(err), nil, 0
+		return http.StatusForbidden, errCode(err, "forbidden"), errMessage(err), nil, 0
 	case errors.Is(err, apperr.ErrConflict):
-		return http.StatusConflict, "conflict", errMessage(err), nil, 0
+		return http.StatusConflict, errCode(err, "conflict"), errMessage(err), nil, 0
 	case errors.Is(err, apperr.ErrRateLimited):
-		return http.StatusTooManyRequests, "rate_limited", errMessage(err), nil, rateLimitRetryAfterSeconds
+		return http.StatusTooManyRequests, errCode(err, "rate_limited"), errMessage(err), nil, rateLimitRetryAfterSeconds
 	default:
 		// apperr.ErrInternal и любая произвольная ошибка (не *apperr.Error) — одна ветка:
 		// клиенту всегда фиксированный текст, cause никогда не уходит наружу.
@@ -98,6 +98,18 @@ func errMessage(err error) string {
 		return target.Message()
 	}
 	return err.Error()
+}
+
+// errCode достаёт переопределённый code через apperr.Error.Code(), если он непустой; иначе
+// возвращает fallback (дефолтный код категории).
+func errCode(err error, fallback string) string {
+	var target *apperr.Error
+	if errors.As(err, &target) {
+		if code := target.Code(); code != "" {
+			return code
+		}
+	}
+	return fallback
 }
 
 // errFields достаёт map полей для invalid_input, если err — *apperr.Error.

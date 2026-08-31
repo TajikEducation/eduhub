@@ -28,3 +28,14 @@ type RefreshTokenRepo interface {
 type UserRoleLookup interface {
 	RoleByUserID(ctx context.Context, userID uuid.UUID) (string, error)
 }
+
+// UserRepo — порт в БД для пользователей (E2.4). Реализация — internal/auth/repo/postgres.
+type UserRepo interface {
+	// Create вставляет нового пользователя, возвращает его с полями, сгенерированными БД
+	// (id, created_at, updated_at). Конфликт email → apperr.ConflictCode("email_taken", ...).
+	Create(ctx context.Context, u domain.User) (domain.User, error)
+	// FindByEmail — apperr.NotFound, если email не найден.
+	FindByEmail(ctx context.Context, email string) (domain.User, error)
+	// FindByID — apperr.NotFound, если не найден.
+	FindByID(ctx context.Context, id uuid.UUID) (domain.User, error)
+}

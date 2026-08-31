@@ -28,10 +28,18 @@ type Error struct {
 	category error
 	message  string
 	cause    error
+	// code — переопределение машиночитаемого code в теле ответа (см. httpx.WriteError);
+	// пусто = использовать дефолтный код категории.
+	code string
 
 	// Fields — какое поле что не так, заполняется только для Invalid.
 	Fields map[string]string
 }
+
+// Code возвращает переопределённый машиночитаемый code, если он задан (например,
+// "email_taken"), иначе пустую строку — вызывающий (httpx.WriteError) в этом случае
+// использует дефолтный код категории.
+func (e *Error) Code() string { return e.code }
 
 func (e *Error) Error() string {
 	if e.message == "" {
@@ -86,6 +94,18 @@ func Forbidden(message string) error {
 
 func Conflict(message string) error {
 	return &Error{category: ErrConflict, message: message}
+}
+
+// ConflictCode — Conflict с переопределённым машиночитаемым code (например, "email_taken")
+// вместо дефолтного "conflict".
+func ConflictCode(code, message string) error {
+	return &Error{category: ErrConflict, code: code, message: message}
+}
+
+// UnauthorizedCode — Unauthorized с переопределённым машиночитаемым code (например,
+// "google_account_no_password") вместо дефолтного "unauthorized".
+func UnauthorizedCode(code, message string) error {
+	return &Error{category: ErrUnauthorized, code: code, message: message}
 }
 
 func RateLimited(message string) error {
