@@ -125,3 +125,56 @@ func TestLoad_CORSAllowedOriginsUnsetIsEmpty(t *testing.T) {
 		t.Errorf("CORSAllowedOrigins = %v, want empty", cfg.CORSAllowedOrigins)
 	}
 }
+
+func TestLoad_ArgonParamsUnsetAreZero(t *testing.T) {
+	t.Setenv("APP_ENV", "dev")
+	t.Setenv("DATABASE_URL", "postgres://eduhub:eduhub@localhost:5433/eduhub?sslmode=disable")
+	t.Setenv("REDIS_ADDR", "localhost:6380")
+	t.Setenv("ARGON_MEMORY_KIB", "")
+	t.Setenv("ARGON_ITERATIONS", "")
+	t.Setenv("ARGON_PARALLELISM", "")
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("Load() unexpected error: %v", err)
+	}
+	if cfg.ArgonMemoryKiB != 0 || cfg.ArgonIterations != 0 || cfg.ArgonParallelism != 0 {
+		t.Errorf("Argon* = (%d,%d,%d), want (0,0,0) когда переменные не заданы",
+			cfg.ArgonMemoryKiB, cfg.ArgonIterations, cfg.ArgonParallelism)
+	}
+}
+
+func TestLoad_ArgonParamsParsesSetValues(t *testing.T) {
+	t.Setenv("APP_ENV", "dev")
+	t.Setenv("DATABASE_URL", "postgres://eduhub:eduhub@localhost:5433/eduhub?sslmode=disable")
+	t.Setenv("REDIS_ADDR", "localhost:6380")
+	t.Setenv("ARGON_MEMORY_KIB", "65536")
+	t.Setenv("ARGON_ITERATIONS", "3")
+	t.Setenv("ARGON_PARALLELISM", "4")
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("Load() unexpected error: %v", err)
+	}
+	if cfg.ArgonMemoryKiB != 65536 {
+		t.Errorf("ArgonMemoryKiB = %d, want 65536", cfg.ArgonMemoryKiB)
+	}
+	if cfg.ArgonIterations != 3 {
+		t.Errorf("ArgonIterations = %d, want 3", cfg.ArgonIterations)
+	}
+	if cfg.ArgonParallelism != 4 {
+		t.Errorf("ArgonParallelism = %d, want 4", cfg.ArgonParallelism)
+	}
+}
+
+func TestLoad_ArgonMemoryKiBInvalid_ReturnsError(t *testing.T) {
+	t.Setenv("APP_ENV", "dev")
+	t.Setenv("DATABASE_URL", "postgres://eduhub:eduhub@localhost:5433/eduhub?sslmode=disable")
+	t.Setenv("REDIS_ADDR", "localhost:6380")
+	t.Setenv("ARGON_MEMORY_KIB", "не-число")
+
+	_, err := config.Load()
+	if err == nil {
+		t.Fatal("Load() с невалидным ARGON_MEMORY_KIB вернул nil-ошибку")
+	}
+}

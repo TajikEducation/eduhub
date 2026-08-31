@@ -4,6 +4,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -22,6 +23,13 @@ type Config struct {
 	LogLevel           string
 	ShutdownTimeout    time.Duration
 	CORSAllowedOrigins []string
+
+	// Параметры стоимости argon2id (E2.2) — 0 означает «не задано», composition root
+	// (cmd/api/main.go) в этом случае берёт значение из password.DefaultParams. Config
+	// намеренно не знает про internal/auth/password (platform не знает про домены).
+	ArgonMemoryKiB   uint32
+	ArgonIterations  uint32
+	ArgonParallelism uint8
 }
 
 // Load читает конфигурацию из ENV, возвращает ошибку при отсутствии обязательной переменной.
@@ -58,7 +66,52 @@ func Load() (Config, error) {
 		cfg.ShutdownTimeout = d
 	}
 
+	argonMemoryKiB, err := parseOptionalUint32("ARGON_MEMORY_KIB")
+	if err != nil {
+		return Config{}, err
+	}
+	cfg.ArgonMemoryKiB = argonMemoryKiB
+
+	argonIterations, err := parseOptionalUint32("ARGON_ITERATIONS")
+	if err != nil {
+		return Config{}, err
+	}
+	cfg.ArgonIterations = argonIterations
+
+	argonParallelism, err := parseOptionalUint8("ARGON_PARALLELISM")
+	if err != nil {
+		return Config{}, err
+	}
+	cfg.ArgonParallelism = argonParallelism
+
 	return cfg, nil
+}
+
+// parseOptionalUint32 — пустая переменная окружения → 0 («не задано», не ошибка),
+// непустая нечисловая → ошибка формата.
+func parseOptionalUint32(name string) (uint32, error) {
+	raw := os.Getenv(name)
+	if raw == "" {
+		return 0, nil
+	}
+	v, err := strconv.ParseUint(raw, 10, 32)
+	if err != nil {
+		return 0, fmt.Errorf("config: invalid %s %q: %w", name, raw, err)
+	}
+	return uint32(v), nil
+}
+
+// parseOptionalUint8 — та же семантика, что parseOptionalUint32, для 8-битных значений.
+func parseOptionalUint8(name string) (uint8, error) {
+	raw := os.Getenv(name)
+	if raw == "" {
+		return 0, nil
+	}
+	v, err := strconv.ParseUint(raw, 10, 8)
+	if err != nil {
+		return 0, fmt.Errorf("config: invalid %s %q: %w", name, raw, err)
+	}
+	return uint8(v), nil
 }
 
 // parseCORSAllowedOrigins разбирает CORS_ALLOWED_ORIGINS (список через запятую) в slice origin'ов.
