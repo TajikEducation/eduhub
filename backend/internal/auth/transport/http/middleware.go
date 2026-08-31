@@ -60,6 +60,34 @@ func RequireAuth(issuer *jwt.Issuer, logger *slog.Logger) func(http.Handler) htt
 	}
 }
 
+// RequireRole — middleware поверх RequireAuth: пропускает только Principal с одной из
+// перечисленных ролей. Использовать ПОСЛЕ RequireAuth в цепочке — RequireRole сам не проверяет
+// токен, только читает уже положенный в контекст Principal. Отсутствие Principal (RequireRole
+// подключён без RequireAuth) — баг wiring, не 401/403 вызывающему, apperr.Internal.
+func RequireRole(logger *slog.Logger, roles ...string) func(http.Handler) http.Handler {
+	allowed := make(map[string]struct{}, len(roles))
+	for _, role := range roles {
+		allowed[role] = struct{}{}
+	}
+
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			principal, ok := FromContext(r.Context())
+			if !ok {
+				httpx.WriteError(w, r, logger, apperr.Internal(errNoPrincipalInContext))
+				return
+			}
+
+			if _, ok := allowed[principal.Role]; !ok {
+				httpx.WriteError(w, r, logger, apperr.Forbidden("недостаточно прав для этого действия"))
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
 // bearerToken извлекает токен из заголовка "Authorization: Bearer <token>".
 func bearerToken(r *http.Request) (string, bool) {
 	header := r.Header.Get("Authorization")
