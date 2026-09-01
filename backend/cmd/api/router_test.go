@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 
 	authdomain "github.com/abdulhalim/eduhub/backend/internal/auth/domain"
+	"github.com/abdulhalim/eduhub/backend/internal/auth/jwt"
 	"github.com/abdulhalim/eduhub/backend/internal/auth/password"
 	"github.com/abdulhalim/eduhub/backend/internal/catalog/domain"
 	"github.com/abdulhalim/eduhub/backend/internal/platform/apperr"
@@ -108,6 +109,25 @@ func (fakeVerificationCodeRepo) Delete(context.Context, uuid.UUID) error {
 	return apperr.Internal(nil)
 }
 
+// fakeChildRepo — минимальный дублёр authusecase.ChildRepo для этого же smoke-теста.
+type fakeChildRepo struct{}
+
+func (fakeChildRepo) Create(context.Context, authdomain.Child) (authdomain.Child, error) {
+	return authdomain.Child{}, apperr.Internal(nil)
+}
+
+func (fakeChildRepo) ListPendingByInstitution(context.Context, uuid.UUID) ([]authdomain.Child, error) {
+	return nil, apperr.Internal(nil)
+}
+
+func (fakeChildRepo) Confirm(context.Context, uuid.UUID, uuid.UUID, string, string) (authdomain.Child, error) {
+	return authdomain.Child{}, apperr.NotFound("child", "irrelevant")
+}
+
+func (fakeChildRepo) Reject(context.Context, uuid.UUID, uuid.UUID, string, string, *string, string) (authdomain.Child, error) {
+	return authdomain.Child{}, apperr.NotFound("child", "irrelevant")
+}
+
 // fakeCatalogRepo — дублёр InstitutionRepo для сквозного smoke-теста: не трогает реальную БД,
 // просто отдаёт заранее подготовленные значения.
 type fakeCatalogRepo struct {
@@ -124,6 +144,12 @@ func (f *fakeCatalogRepo) GetByID(ctx context.Context, id uuid.UUID) (domain.Ins
 	return f.getInst, f.getErr
 }
 
+// IsApproved не используется этим smoke-тестом — реализован только чтобы fakeCatalogRepo
+// продолжал удовлетворять catalogusecase.InstitutionRepo после добавления метода в интерфейс (E2.6).
+func (f *fakeCatalogRepo) IsApproved(ctx context.Context, id uuid.UUID) (bool, error) {
+	return true, nil
+}
+
 // doGet — обёртка над http.NewRequestWithContext+Do: линтер (noctx) требует контекст
 // на каждом внешнем вызове, простой http.Get его не пробрасывает.
 func doGet(ctx context.Context, t *testing.T, url string) (*http.Response, error) {
@@ -132,6 +158,18 @@ func doGet(ctx context.Context, t *testing.T, url string) (*http.Response, error
 	if err != nil {
 		t.Fatalf("NewRequestWithContext: %v", err)
 	}
+	return http.DefaultClient.Do(req)
+}
+
+// doAuth — то же самое, но с методом и Bearer-токеном — для проверки RequireAuth/RequireRole
+// сквозь реальную middleware-цепочку (E2.6).
+func doAuth(ctx context.Context, t *testing.T, method, url, token string) (*http.Response, error) {
+	t.Helper()
+	req, err := http.NewRequestWithContext(ctx, method, url, nil)
+	if err != nil {
+		t.Fatalf("NewRequestWithContext: %v", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
 	return http.DefaultClient.Do(req)
 }
 
@@ -152,7 +190,7 @@ func TestSmoke_CatalogRoutesThroughRealServer(t *testing.T) {
 	}
 
 	hasher := password.New(password.DefaultParams)
-	handler := newHandler(log, nil, nil, fakeRepo, nil, fakeAuthUserRepo{}, fakeRefreshTokenRepo{}, fakeOAuthIdentityRepo{}, fakeVerificationCodeRepo{}, hasher, []byte("test-secret"), clock.New(), "")
+	handler := newHandler(log, nil, nil, fakeRepo, nil, fakeAuthUserRepo{}, fakeRefreshTokenRepo{}, fakeOAuthIdentityRepo{}, fakeVerificationCodeRepo{}, fakeChildRepo{}, hasher, []byte("test-secret"), clock.New(), "")
 
 	cfg := config.Config{HTTPAddr: ":0", ShutdownTimeout: 2 * time.Second}
 	ctx, cancel := context.WithCancel(context.Background())
@@ -259,6 +297,61 @@ func TestSmoke_CatalogRoutesThroughRealServer(t *testing.T) {
 		}
 		if code, _ := errField["code"].(string); code == "" {
 			t.Fatal("expected non-empty error.code")
+		}
+	})
+
+	// RBAC-гейтинг E2.6: без institution_owners (E3.3-E3.4) confirm/reject доступны только
+	// moderator/admin — эта проверка держит гейт живым, если кто-то уберёт RequireRole из цепочки
+	// в router.go, ни один существующий тест каталога это не заметит.
+	issuer := jwt.NewIssuer([]byte("test-secret"), accessTokenTTL, clock.New())
+	userToken, err := issuer.Issue(uuid.New(), "user")
+	if err != nil {
+		t.Fatalf("issuer.Issue(user): %v", err)
+	}
+	moderatorToken, err := issuer.Issue(uuid.New(), "moderator")
+	if err != nil {
+		t.Fatalf("issuer.Issue(moderator): %v", err)
+	}
+
+	t.Run("роль user получает 403 на модераторских роутах E2.6", func(t *testing.T) {
+		routes := []struct {
+			method, path string
+		}{
+			{http.MethodGet, "/institutions/" + someID.String() + "/children/pending"},
+			{http.MethodPost, "/children/" + someID.String() + "/confirm"},
+			{http.MethodPost, "/children/" + someID.String() + "/reject"},
+		}
+		for _, rt := range routes {
+			resp, err := doAuth(ctx, t, rt.method, "http://"+addr+rt.path, userToken)
+			if err != nil {
+				t.Fatalf("%s %s: %v", rt.method, rt.path, err)
+			}
+			_ = resp.Body.Close()
+			if resp.StatusCode != http.StatusForbidden {
+				t.Errorf("%s %s: status = %d, want %d (RequireRole должен блокировать роль user)", rt.method, rt.path, resp.StatusCode, http.StatusForbidden)
+			}
+		}
+	})
+
+	t.Run("роль moderator пропускается RequireRole на роутах E2.6", func(t *testing.T) {
+		// Не 403 достаточно, чтобы доказать, что RequireRole пропустил запрос дальше в хендлер —
+		// конкретные коды (500/404) идут от fakeChildRepo, не от RBAC-гейта.
+		resp, err := doAuth(ctx, t, http.MethodGet, "http://"+addr+"/institutions/"+someID.String()+"/children/pending", moderatorToken)
+		if err != nil {
+			t.Fatalf("GET .../children/pending: %v", err)
+		}
+		_ = resp.Body.Close()
+		if resp.StatusCode == http.StatusForbidden {
+			t.Errorf("status = %d, moderator не должен получать 403", resp.StatusCode)
+		}
+
+		resp, err = doAuth(ctx, t, http.MethodPost, "http://"+addr+"/children/"+someID.String()+"/confirm", moderatorToken)
+		if err != nil {
+			t.Fatalf("POST .../confirm: %v", err)
+		}
+		_ = resp.Body.Close()
+		if resp.StatusCode != http.StatusNotFound {
+			t.Errorf("status = %d, want %d (fakeChildRepo.Confirm возвращает NotFound)", resp.StatusCode, http.StatusNotFound)
 		}
 	})
 

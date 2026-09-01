@@ -63,6 +63,7 @@ func newHandler(
 	refreshTokenRepo authusecase.RefreshTokenRepo,
 	oauthRepo authusecase.OAuthIdentityRepo,
 	verificationCodeRepo authusecase.VerificationCodeRepo,
+	childRepo authusecase.ChildRepo,
 	hasher *password.Hasher,
 	jwtSecret []byte,
 	clk clock.Clock,
@@ -82,6 +83,7 @@ func newHandler(
 	googleVerifier := googleoauth.NewVerifier(googleClientID)
 	accountSvc := authusecase.NewAccountService(userRepo, hasher, sessionSvc, clk, googleVerifier, oauthRepo)
 	verificationSvc := authusecase.NewVerificationService(userRepo, verificationCodeRepo, sessionSvc, hasher, clk, log)
+	childSvc := authusecase.NewChildService(childRepo, catalogRepo, clk)
 
 	router := httpx.NewRouter(log)
 	router.Handle("GET /healthz", httpx.Healthz(log))
@@ -104,6 +106,13 @@ func newHandler(
 	router.Handle("POST /auth/password/reset-confirm", authhttp.PasswordResetConfirmHandler(verificationSvc, log))
 	router.Handle("POST /auth/consent", authhttp.RequireAuth(jwtIssuer, log)(authhttp.ConsentHandler(accountSvc, log)))
 	router.Handle("DELETE /auth/me", authhttp.RequireAuth(jwtIssuer, log)(authhttp.DeleteMeHandler(accountSvc, log)))
+	router.Handle("POST /auth/children", authhttp.RequireAuth(jwtIssuer, log)(authhttp.CreateChildHandler(childSvc, log)))
+	router.Handle("GET /institutions/{id}/children/pending",
+		authhttp.RequireAuth(jwtIssuer, log)(authhttp.RequireRole(log, "moderator", "admin")(authhttp.ListPendingChildrenHandler(childSvc, log))))
+	router.Handle("POST /children/{id}/confirm",
+		authhttp.RequireAuth(jwtIssuer, log)(authhttp.RequireRole(log, "moderator", "admin")(authhttp.ConfirmChildHandler(childSvc, log))))
+	router.Handle("POST /children/{id}/reject",
+		authhttp.RequireAuth(jwtIssuer, log)(authhttp.RequireRole(log, "moderator", "admin")(authhttp.RejectChildHandler(childSvc, log))))
 
 	return httpx.Chain(httpx.WithRequestID, httpx.AccessLog(log), httpx.CORS(corsOrigins), httpx.Recover(log))(router)
 }

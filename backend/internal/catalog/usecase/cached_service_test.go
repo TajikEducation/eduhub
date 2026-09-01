@@ -39,6 +39,12 @@ func (r *countingRepo) GetByID(_ context.Context, _ uuid.UUID) (domain.Instituti
 	return domain.Institution{}, nil
 }
 
+// IsApproved не используется тестами в этом файле — реализован только чтобы countingRepo
+// продолжал удовлетворять usecase.InstitutionRepo после добавления метода в интерфейс (E2.6).
+func (r *countingRepo) IsApproved(_ context.Context, _ uuid.UUID) (bool, error) {
+	return true, nil
+}
+
 func (r *countingRepo) callCount() int {
 	r.mu.Lock()
 	defer r.mu.Unlock()

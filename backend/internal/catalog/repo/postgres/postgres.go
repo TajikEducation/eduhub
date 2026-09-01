@@ -353,6 +353,23 @@ func (r *InstitutionRepo) GetByID(ctx context.Context, id uuid.UUID) (domain.Ins
 	return *inst, nil
 }
 
+// IsApproved возвращает true, если moderation_status учреждения = 'approved'. apperr.ErrNotFound —
+// если учреждение с id не существует. Используется кросс-схемным портом
+// auth/usecase.InstitutionStatusChecker (E2.6) — FK на catalog.institutions гарантирует только
+// существование строки, не значение moderation_status, поэтому явная проверка нужна отдельно.
+func (r *InstitutionRepo) IsApproved(ctx context.Context, id uuid.UUID) (bool, error) {
+	const q = `SELECT moderation_status = 'approved' FROM catalog.institutions WHERE id = $1`
+	var approved bool
+	err := r.db.QueryRow(ctx, q, id).Scan(&approved)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, apperr.NotFound("institution", id.String())
+	}
+	if err != nil {
+		return false, fmt.Errorf("postgres: is institution approved: %w", err)
+	}
+	return approved, nil
+}
+
 // bilingualWire — форма вложенного JSON-объекта {ru,tg} внутри агрегатов сателлитных коллекций
 // (не путать с bilingualJSON, который разбирает колонки самой catalog.institutions).
 type bilingualWire struct {

@@ -78,3 +78,30 @@ type OAuthIdentityRepo interface {
 	// (проверяется до вызова), но на всякий случай тоже apperr.ConflictCode, не голая ошибка БД.
 	Create(ctx context.Context, oi domain.OAuthIdentity) error
 }
+
+// ChildRepo — порт в БД для привязок родитель↔учреждение (E2.6). Реализация —
+// internal/auth/repo/postgres.
+type ChildRepo interface {
+	// Create вставляет новую привязку. UNIQUE(user_id, institution_id) конфликт →
+	// apperr.ConflictCode("child_link_exists", ...).
+	Create(ctx context.Context, c domain.Child) (domain.Child, error)
+
+	// ListPendingByInstitution — привязки со confirmation_status='pending' для очереди подтверждения.
+	ListPendingByInstitution(ctx context.Context, institutionID uuid.UUID) ([]domain.Child, error)
+
+	// Confirm атомарно переводит confirmation_status: pending→confirmed и пишет запись
+	// в moderation.audit_log в одной транзакции. apperr.NotFound, если привязки с id нет;
+	// apperr.ConflictCode("child_not_pending", ...), если confirmation_status уже не 'pending'.
+	Confirm(ctx context.Context, childID, actorID uuid.UUID, actorRole, requestID string) (domain.Child, error)
+
+	// Reject — то же самое для отклонения, с обязательной структурированной причиной.
+	Reject(ctx context.Context, childID, actorID uuid.UUID, actorRole, reasonCode string, reasonText *string, requestID string) (domain.Child, error)
+}
+
+// InstitutionStatusChecker — кросс-схемный порт проверки статуса модерации учреждения:
+// auth не владеет схемой catalog, поэтому не прямой SQL-запрос, а интерфейс. Реализация —
+// internal/catalog/repo/postgres.
+type InstitutionStatusChecker interface {
+	// IsApproved — apperr.NotFound, если учреждение с id не существует.
+	IsApproved(ctx context.Context, institutionID uuid.UUID) (bool, error)
+}

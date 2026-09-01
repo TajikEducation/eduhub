@@ -87,3 +87,26 @@ type consentRequest struct {
 type statusResponse struct {
 	Status string `json:"status"`
 }
+
+type createChildRequest struct {
+	InstitutionID uuid.UUID `json:"institution_id"`
+	AgeGroup      string    `json:"age_group"`
+	Status        string    `json:"status"`
+}
+
+type rejectChildRequest struct {
+	ReasonCode string  `json:"reason_code"`
+	ReasonText *string `json:"reason_text,omitempty"`
+}
+
+type childResponse struct {
+	ID                 uuid.UUID  `json:"id"`
+	UserID             uuid.UUID  `json:"user_id"`
+	InstitutionID      uuid.UUID  `json:"institution_id"`
+	AgeGroup           string     `json:"age_group"`
+	Status             string     `json:"status"`
+	ConfirmationStatus string     `json:"confirmation_status"`
+	ConfirmedBy        *uuid.UUID `json:"confirmed_by,omitempty"`
+	ConfirmedAt        *time.Time `json:"confirmed_at,omitempty"`
+	CreatedAt          time.Time  `json:"created_at"`
+}

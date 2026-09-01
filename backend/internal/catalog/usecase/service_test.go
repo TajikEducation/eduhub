@@ -34,6 +34,12 @@ func (f *fakeRepo) GetByID(_ context.Context, _ uuid.UUID) (domain.Institution, 
 	return f.getByIDInst, f.getByIDErr
 }
 
+// IsApproved не используется тестами в этом файле — реализован только чтобы fakeRepo продолжал
+// удовлетворять usecase.InstitutionRepo после добавления метода в интерфейс (E2.6).
+func (f *fakeRepo) IsApproved(_ context.Context, _ uuid.UUID) (bool, error) {
+	return true, nil
+}
+
 func TestService_List_ForcesApprovedStatus(t *testing.T) {
 	fake := &fakeRepo{}
 	svc := usecase.New(fake)

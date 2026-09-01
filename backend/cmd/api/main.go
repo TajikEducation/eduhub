@@ -15,6 +15,7 @@ import (
 	authpg "github.com/abdulhalim/eduhub/backend/internal/auth/repo/postgres"
 	catalogpg "github.com/abdulhalim/eduhub/backend/internal/catalog/repo/postgres"
 	"github.com/abdulhalim/eduhub/backend/internal/catalog/repo/rediscache"
+	"github.com/abdulhalim/eduhub/backend/internal/moderation"
 	"github.com/abdulhalim/eduhub/backend/internal/platform/clock"
 	"github.com/abdulhalim/eduhub/backend/internal/platform/config"
 	"github.com/abdulhalim/eduhub/backend/internal/platform/httpx"
@@ -60,11 +61,12 @@ func main() {
 	refreshTokenRepo := authpg.NewRefreshTokenRepo(pool)
 	oauthRepo := authpg.NewOAuthRepo(pool)
 	verificationCodeRepo := authpg.NewVerificationCodeRepo(pool)
+	childRepo := authpg.NewChildRepo(pool, moderation.NewRecorder())
 
 	handler := newHandler(
 		log, cfg.CORSAllowedOrigins, []httpx.Dependency{{Name: "db", Ping: pool.Ping}},
 		catalogpg.New(pool), cache,
-		userRepo, refreshTokenRepo, oauthRepo, verificationCodeRepo, hasher, []byte(cfg.JWTSecret), clock.New(), cfg.GoogleClientID,
+		userRepo, refreshTokenRepo, oauthRepo, verificationCodeRepo, childRepo, hasher, []byte(cfg.JWTSecret), clock.New(), cfg.GoogleClientID,
 	)
 
 	deps := Deps{Logger: log, Pool: pool, Handler: handler}
